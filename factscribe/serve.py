@@ -26,8 +26,8 @@ from .config import ConfigError, load_config
 from .pdfmap import locate, section_title
 from .projects import (ProjectCreateError, create_project, factscribe_dir,
                        project_description, project_name, read_registry,
-                       remove_project, resolve_project, upsert_project,
-                       write_registry)
+                       remove_project, resolve_project, update_project,
+                       upsert_project, write_registry)
 from .constants import EXIT_OK, VERSION
 from .report import ReportError, _payload, _severity_of
 from .reportapi import report_action_data, reports_data
@@ -229,6 +229,9 @@ class _Handler(BaseHTTPRequestHandler):
                 return
             if path == "/api/projects/create":
                 self._projects_create()
+                return
+            if path == "/api/projects/update":
+                self._projects_update()
                 return
             if path == "/api/audit":
                 self._audit()
@@ -493,6 +496,24 @@ class _Handler(BaseHTTPRequestHandler):
             project={"path": data["path"], "name": data["name"],
                      "description": data["description"]},
             created=True, files=data["files"],
+            projects=self._project_rows(registry),
+            lastPath=registry["lastPath"],
+            python=registry["python"], pythonpath=registry["pythonpath"]))
+
+    def _projects_update(self) -> None:
+        """改项目的名字与简介：登记册 + `paperkit.toml` 一起改。
+
+        要 token，也要 `--allow-write`（它写盘）。路径不在登记册里 → 400。
+        """
+        self._require_write()
+        body = self._body()
+        registry = read_registry()
+        data = update_project(registry, str(body.get("path") or ""),
+                              str(body.get("name") or ""),
+                              str(body.get("description") or ""))
+        write_registry(registry)
+        self._send(200, self._base(
+            "projects_update", project=data,
             projects=self._project_rows(registry),
             lastPath=registry["lastPath"],
             python=registry["python"], pythonpath=registry["pythonpath"]))

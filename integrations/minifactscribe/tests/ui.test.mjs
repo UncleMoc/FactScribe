@@ -96,14 +96,18 @@ test('本地工作台是独立入口，界面只呈现工作台项目的结果',
   assert.match(JS, /runWorkbenchAudit/, '应有工作台审计入口');
 });
 
-test('工作台可载入项目并按节保存，且保存前说明写给工作台项目', () => {
-  assert.match(HTML, /id="btn-workbench-load"/, '应有载入项目按钮');
+test('工作台按节保存，且保存前说明写给工作台项目', () => {
   assert.match(HTML, /id="workbench-section-select"/, '应有节选择');
   assert.match(HTML, /id="btn-workbench-save"/, '应有保存按钮');
   assert.match(HTML, /写给工作台项目/, '必须说明写入目标');
   assert.match(JS, /wb\('\/project'\)/, '应载入工作台项目（经 wb 适配）');
   assert.match(JS, /wb\('\/sections'\)/, '应能保存工作台章节（经 wb 适配）');
   assert.match(JS, /MODE\.mini \? '\/api\/workbench' : '\/api'/, 'MiniApp 走 Node 代理，网页直连 Python');
+});
+
+test('「载入工作台项目」按钮删干净了：切换、保存、导入后都会自动刷新', () => {
+  assert.doesNotMatch(HTML, /id="btn-workbench-load"/, '不该再有载入工作台项目按钮');
+  assert.doesNotMatch(JS, /btn-workbench-load/, '也不该再有它的监听');
 });
 
 
@@ -140,9 +144,7 @@ test('能从当前对话读项目文件夹（session.read），没有就提示',
 
 test('论文项目＝文件夹：列表、路径校验、切换即换文件夹', () => {
   assert.match(HTML, /id="project-list"/, '应有项目列表（不是下拉框）');
-  assert.match(HTML, /id="project-path"/, '应有项目文件夹输入');
-  assert.match(HTML, /id="btn-project-add"/, '应能把文件夹加入列表');
-  assert.match(HTML, /id="btn-project-forget"/, '应能从列表移除（不动文件夹）');
+  assert.match(HTML, /id="project-path"/, '当前项目文件夹的位置还在（隐藏着，逻辑从它取路径）');
   assert.match(HTML, /id="btn-workbench-start"/, '应有一键启动');
   assert.match(HTML, /id="btn-workbench-stop"/, '应能停止');
   assert.match(HTML, /id="workbench-allow-write"/, '写权限必须是显式开关');
@@ -205,7 +207,7 @@ test('网页也能管项目：不带路径启动，页面里选文件夹', () =>
   assert.match(JS, /还没有选论文项目/, '未选项目要说清下一步');
   assert.match(JS, /\/api\/projects/, '项目列表与加入走同一接口');
   assert.match(HTML, /id="project-list"/, '项目列表两种模式都该在');
-  assert.match(HTML, /id="btn-project-add"/, '加入项目列表两种模式都该在');
+  assert.match(HTML, /id="btn-np-existing-add"/, '加入已有文件夹两种模式都该在');
   assert.doesNotMatch(JS, /'#btn-project-add', '#btn-project-host',/, '网页里不能禁用加入按钮');
 });
 
@@ -507,12 +509,12 @@ test('引用页的颜色只用现成变量：深浅两套都跟着走', () => {
   assert.match(block, /var\(--mcode-accent-soft\)/, '当前过滤项要用语义变量');
 });
 
-test('项目页装的是项目管理：列表、路径、加入/移除、权限、启动/停止、解释器', () => {
+test('项目页装的是项目管理：列表、权限、启动/停止、解释器', () => {
   const panel = HTML.slice(HTML.indexOf('id="panel-project"'), HTML.indexOf('id="panel-ai"'));
-  for (const id of ['project-list', 'project-path', 'btn-project-add', 'btn-project-forget',
+  for (const id of ['project-list', 'project-path', 'btn-project-host',
     'workbench-allow-write', 'workbench-allow-build', 'btn-workbench-start',
     'btn-workbench-stop', 'btn-workbench-connect', 'project-python',
-    'btn-workbench-load', 'workbench-host-path', 'btn-new-project']) {
+    'workbench-host-path', 'btn-new-project']) {
     assert.match(panel, new RegExp('id="' + id + '"'), '项目面板里应有 ' + id);
   }
   // 「最近项目」下拉已经换成列表：下拉不许再回来。
@@ -524,6 +526,37 @@ test('项目页装的是项目管理：列表、路径、加入/移除、权限�
   assert.doesNotMatch(wb, /id="wb-section-list"/, '章节目录搬去左侧栏了，不该留在工作台页签');
   assert.match(wb, /id="workbench-status"/, '动作消息行要留在工作台页签');
   assert.match(wb, /id="workbench-save-state"/, '保存状态要留在工作台页签');
+});
+
+test('项目列表是手风琴：一行一项，展开后有编辑/删除/载入项目/复制路径', () => {
+  const block = JS.slice(JS.indexOf('function renderProjectList'),
+    JS.indexOf('async function projectItemAction'));
+  assert.ok(block.length > 0, '应有列表渲染函数');
+  for (const [action, label] of [['edit', '编辑'], ['delete', '删除'],
+    ['load', '载入项目'], ['copy', '复制路径']]) {
+    assert.match(block, new RegExp("'" + action + "'"), '列表项要有动作：' + action);
+    assert.match(JS, new RegExp("'" + label + "'"), '动作文案要进字典：' + label);
+  }
+  assert.match(JS, /state\.projectOpen === path \? '' : path/, '同一时刻只展开一条，再点收起');
+  assert.match(JS, /confirm\(/, '删除要先问一次');
+  assert.match(JS, /wb\('\/projects\/update'\)/, '编辑要走新的更新接口');
+  assert.match(JS, /clipboard/, '复制路径要写剪贴板');
+});
+
+test('项目页右栏是窄栏，只有三个按钮', () => {
+  const side = HTML.slice(HTML.indexOf('class="project-side"'),
+    HTML.indexOf('</aside>', HTML.indexOf('class="project-side"')));
+  assert.ok(side.length > 0, '应有右栏');
+  for (const id of ['btn-new-project', 'btn-guide-open', 'btn-guide-reset']) {
+    assert.match(side, new RegExp('id="' + id + '"'), '右栏要有 ' + id);
+  }
+  const buttons = [...side.matchAll(/<button[^>]*id="([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(buttons, ['btn-new-project', 'btn-guide-open', 'btn-guide-reset'],
+    '右栏只有这三个按钮，顺序不变');
+  assert.doesNotMatch(side, /id="guide-card"/, '新手引导整张卡片要去掉');
+  assert.doesNotMatch(HTML, /id="btn-project-add"/, '「加入已有文件夹」独立输入要去掉');
+  assert.match(CSS, /\.project-layout\s*\{[^}]*grid-template-columns:[^}]*200px/,
+    '右栏是窄栏（约 200px）');
 });
 
 test('工作台事实账搬进独立面板 #/facts：事实块 id 一个没变', () => {
@@ -558,11 +591,17 @@ test('启动落在哪一页由 hash 说了算；非法 hash 退回默认页', ()
   assert.match(JS, /const hashPage = pageFromHash\(\)/, '启动时应读 hash');
   assert.match(JS, /hashPage \|\| defaultPage\(\)/, '没给 hash 时用默认页');
   assert.match(JS, /function defaultPage/, '应有默认页函数');
-  assert.match(JS, /function defaultPage\(\) \{\s*return 'workbench'/, '两种模式都默认落到工作台');
+  assert.match(JS, /function defaultPage\(\) \{\s*return 'project'/, '两种模式都默认落到项目管理页');
   // 非法 hash 不能停在一个空白面板上
   const on = JS.slice(JS.indexOf('function onHashChange'), JS.indexOf('function renderTab'));
   assert.match(on, /const fallback = defaultPage\(\)/, '非法 hash 要退回默认页');
   assert.match(on, /switchTab\(fallback/, '退回后要真的切过去');
+});
+
+test('默认进项目页：上次停在哪个页签不再决定（只有 hash 明确指向别页才去别页）', () => {
+  assert.doesNotMatch(JS, /localStorage\.getItem\('minifactscribe\.tab'\)/,
+    '不许用上次的页签盖掉默认页');
+  assert.match(JS, /switchTab\(hashPage \|\| defaultPage\(\)/, '启动只看 hash');
 });
 
 test('renderTab 认得新页面：报告页渲染报告，项目页渲染项目，事实页渲染事实账', () => {
@@ -604,14 +643,24 @@ test('侧栏顶部按钮进项目页：项目视图不在导航里，只能从�
   assert.match(block, /switchTab\('project'\)/, '项目按钮要进项目页');
 });
 
-test('侧栏项目名跟着工作台项目走：没有项目就写「未选择」', () => {
+test('侧栏项目名跟着工作台项目走：没有项目就写那句默认提示', () => {
   const block = JS.slice(JS.indexOf('function renderSidebarProject'),
     JS.indexOf('function renderWorkbench()'));
   assert.ok(block.length > 0, '应有侧栏项目名渲染函数');
   assert.match(block, /workbenchProject/, '名字来自工作台项目');
-  assert.match(block, /sidebar\.noProject/, '没有项目要说清没选（文案走字典）');
-  assert.match(JS, /'sidebar\.noProject':\s*'未选择'/, '"未选择"这句文案要留在字典里');
+  assert.match(HTML, /data-i18n="sidebar\.noProject"/, '没项目时那句提示挂在空态元素上');
+  assert.match(JS, /'sidebar\.noProject':\s*'未选择项目，点击项目管理选择或新建项目'/,
+    '没项目时那句提示要留在字典里');
   assert.match(block, /sidebar-project-name/, '要写到侧栏那个名字位');
+  assert.match(block, /sidebar-project-empty/, '没项目时显示那句默认提示');
+  assert.match(block, /sidebar-project-root/, '有项目时显示树根');
+  assert.match(block, /sectionsCollapsed/, '根节点可折叠章节');
+});
+
+test('侧栏顶部：按钮是「项目管理」，下面一行是当前项目名', () => {
+  assert.match(HTML, /id="btn-sidebar-project"[\s\S]{0,200}项目管理/, '按钮文案是「项目管理」');
+  assert.match(HTML, /id="sidebar-project-name"/, '按钮下面要有项目名那一行');
+  assert.match(JS, /'btn\.projectManage':\s*'项目管理'/, '按钮文案进字典');
 });
 
 test('标题跟着当前页与项目走：工作台 · 论文名', () => {
@@ -807,12 +856,12 @@ test('显式主题压得住系统偏好：系统是暗色时点「浅」也要�
 
 // ------------------------------------------------------ 新手引导（示例论文）
 
-test('新手引导的四个入口都要在：打开 / 引导条 / 重置 / 关闭', () => {
-  for (const id of ['btn-guide-open', 'guide-bar', 'btn-guide-reset', 'btn-guide-close']) {
+test('新手引导的入口都要在：打开 / 引导条 / 重置 / 关闭', () => {
+  for (const id of ['btn-guide-open', 'guide-bar', 'btn-guide-reset-bar', 'btn-guide-close']) {
     assert.match(HTML, new RegExp('id="' + id + '"'), '页面要有 #' + id);
   }
-  assert.match(HTML, /id="guide-card"/, '项目页要有引导卡片');
-  assert.match(HTML, /用一份示例论文走一遍/, '卡片要说明这是示例，不动用户的论文');
+  // 项目页的引导卡片删了：打开示例与重置示例收进右栏的窄栏里。
+  assert.doesNotMatch(HTML, /id="guide-card"/, '项目页的引导卡片要去掉');
 });
 
 test('装示例走工作台接口：网页直连 Python，MiniApp 走 Node 代理', () => {
@@ -860,15 +909,25 @@ test('新建项目页在：面板、表单、按钮、字段 id 一个不缺', (
   assert.match(HTML, /id="new-project-form"/, '应有新建表单');
   assert.match(HTML, /id="btn-np-create"/, '应有创建按钮');
   assert.match(HTML, /id="btn-np-cancel"/, '应有取消按钮');
-  assert.match(HTML, /id="btn-new-project"/, '项目页要有「新建论文项目」按钮');
+  assert.match(HTML, /id="btn-new-project"/, '项目页要有「新建项目」按钮');
   for (const id of ['np-title', 'np-parent', 'np-slug', 'np-authors', 'np-description',
     'np-lang', 'np-sections', 'np-facts', 'np-bib', 'np-root-tex', 'np-build',
     'np-source-root', 'np-output', 'np-error']) {
     assert.match(HTML, new RegExp('id="' + id + '"'), '新建表单里应有 ' + id);
   }
-  // 引导卡片：打开示例 + 重置示例，两个入口都要在
-  assert.match(HTML, /id="btn-guide-open"/, '引导卡片要有「打开示例论文」');
-  assert.match(HTML, /id="btn-guide-reset-card"/, '引导卡片要有「重置示例」');
+});
+
+test('新建页有两个页签：新建项目 / 加入已有文件夹', () => {
+  assert.match(HTML, /id="btn-np-tab-new"/, '要有「新建项目」页签');
+  assert.match(HTML, /id="btn-np-tab-add"/, '要有「加入已有文件夹」页签');
+  assert.match(HTML, /id="np-existing-path"/, '加入页签要有路径输入');
+  assert.match(HTML, /id="btn-np-existing-add"/, '加入页签要有「加入」按钮');
+  assert.match(JS, /'project\/add'/, 'JS 要认得 #/project/add');
+  const block = JS.slice(JS.indexOf('function pageFromHash'), JS.indexOf('function panelIdFor'));
+  assert.match(block, /project\/add/, 'hash 解析要处理 project/add');
+  assert.match(block, /raw\.startsWith\('project\/'\)/, '非法子路由要回项目列表');
+  assert.match(JS, /addExistingProject/, '要有加入已有文件夹的动作');
+  assert.match(JS, /'\/api\/projects'/, '加入走登记接口');
 });
 
 test('路由认得 project/new：非法子路由回项目列表', () => {
@@ -876,7 +935,6 @@ test('路由认得 project/new：非法子路由回项目列表', () => {
   const block = JS.slice(JS.indexOf('function pageFromHash'), JS.indexOf('function panelIdFor'));
   assert.ok(block.length > 0, '应有 hash 解析函数');
   assert.match(block, /project\/new/, 'hash 解析要处理 project/new');
-  assert.match(block, /raw\.startsWith\('project\/'\)/, '非法子路由要回项目列表');
   assert.match(JS, /function panelIdFor/, '面板 id 要按子路由分');
   assert.match(JS, /panel-project-new/, '新建页有自己的面板');
 });

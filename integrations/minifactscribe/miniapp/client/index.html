@@ -28,27 +28,35 @@
 
     <div class="layout">
       <nav class="sidebar" aria-label="分区导航">
-        <button id="btn-sidebar-project" class="project-switch" type="button"
-          title="切换论文项目：点它去项目页">
-          <span class="project-switch-label" data-i18n="page.project">项目</span>
-          <span id="sidebar-project-name" class="project-switch-name">未选择</span>
-          <span class="project-switch-caret" aria-hidden="true">▾</span>
-        </button>
-
-        <div class="sidebar-block" aria-label="章节目录">
-          <div class="sidebar-block-head">
-            <h2 class="sidebar-block-title" data-i18n="nav.sections">章节目录</h2>
-            <span id="wb-section-count" class="muted-note"></span>
-            <button id="btn-wb-section-add" class="sidebar-block-add" type="button"
-              title="新建章节" aria-label="新建章节" data-i18n-title="wb.sectionAdd">＋</button>
+        <div class="sidebar-project">
+          <button id="btn-sidebar-project" class="project-switch" type="button"
+            title="项目管理：选一个论文项目或新建一个">
+            <span class="project-switch-label" data-i18n="btn.projectManage">项目管理</span>
+          </button>
+          <button id="sidebar-project-root" class="tree-root" type="button" hidden>
+            <span id="sidebar-project-caret" class="tree-caret" aria-hidden="true">▾</span>
+            <span id="sidebar-project-name" class="tree-root-name"></span>
+          </button>
+          <p id="sidebar-project-empty" class="tree-empty"
+            data-i18n="sidebar.noProject">未选择项目，点击项目管理选择或新建项目</p>
+          <div id="sidebar-sections" class="tree-children" hidden>
+            <div class="tree-children-head">
+              <span class="tree-section-label" data-i18n="nav.sections">章节目录</span>
+              <span class="tree-section-actions">
+                <button id="btn-wb-section-add" class="sidebar-block-add" type="button"
+                  title="新建章节" aria-label="新建章节" data-i18n-title="wb.sectionAdd">＋</button>
+                <span id="wb-section-count" class="muted-note"></span>
+              </span>
+            </div>
+            <div id="wb-section-list" class="wb-section-list"></div>
+            <!-- 隐藏的下拉：现有逻辑与测试都认它，目录按钮改动时同步它 -->
+            <label class="field" hidden>
+              <span data-i18n="field.pickSection">选择一节</span>
+              <select id="workbench-section-select"></select>
+            </label>
           </div>
-          <div id="wb-section-list" class="wb-section-list"></div>
-          <!-- 隐藏的下拉：现有逻辑与测试都认它，目录按钮改动时同步它 -->
-          <label class="field" hidden>
-            <span data-i18n="field.pickSection">选择一节</span>
-            <select id="workbench-section-select"></select>
-          </label>
         </div>
+        <div class="sidebar-divider" aria-hidden="true"></div>
 
         <div class="sidebar-nav">
           <button class="nav-item" data-tab="ai" role="tab" aria-selected="false" aria-controls="panel-ai" data-i18n="page.ai">AI 起草</button>
@@ -87,7 +95,7 @@
               <span class="guide-bar-title" data-i18n="guide.bar">新手引导</span>
               <span id="guide-steps" class="guide-steps"></span>
               <div class="panel-actions">
-                <button id="btn-guide-reset" class="btn" type="button" data-i18n="btn.guideReset">重置示例</button>
+                <button id="btn-guide-reset-bar" class="btn" type="button" data-i18n="btn.guideReset">重置示例</button>
                 <button id="btn-guide-close" class="btn" type="button" data-i18n="btn.guideClose">关闭引导</button>
               </div>
             </div>
@@ -286,48 +294,35 @@
             </div>
             <div class="panel-actions">
               <span id="workbench-run-state" class="muted-note"></span>
-              <button id="btn-workbench-load" class="btn" type="button" data-i18n="btn.loadProject">载入工作台项目</button>
             </div>
           </div>
           <p id="project-status" class="muted-note" role="status" aria-live="polite"></p>
 
           <div class="project-layout">
-            <!-- 左栏：项目列表（不是下拉框）。点一项就切到那个文件夹。 -->
+            <!-- 左栏：项目列表（手风琴）。点一项展开，四个动作在里面。 -->
             <section class="project-list-block" aria-labelledby="project-list-title">
               <div class="project-head">
                 <h3 id="project-list-title">论文项目</h3>
-                <p class="panel-desc">点一下就切到那个文件夹；标着「当前」的是正在用的那个。</p>
+                <p class="panel-desc">点一项展开：编辑 / 删除 / 载入项目 / 复制路径。标着「当前」的是正在用的那个。</p>
               </div>
               <ul id="project-list" class="project-list"></ul>
               <p id="project-list-empty" class="line-empty" hidden>还没有论文项目。</p>
-              <div class="project-add-row">
-                <label class="field" for="project-path">
-                  <span>加入已有文件夹</span>
-                  <input id="project-path" type="text" autocomplete="off" placeholder="/Users/you/paper" />
-                </label>
-                <button id="btn-project-add" class="btn" type="button" data-i18n="btn.addProject">加入</button>
-              </div>
               <div class="panel-actions" style="margin: 8px 0">
                 <button id="btn-project-host" class="btn" type="button" data-i18n="btn.useHostProject">用当前对话项目</button>
-                <button id="btn-project-forget" class="btn" type="button" data-i18n="btn.removeProject">从列表移除</button>
               </div>
+              <!-- 隐藏的路径位：当前项目文件夹。启动工作台等逻辑都从它取路径。 -->
+              <label class="field" hidden>
+                <span data-i18n="field.projectFolder">项目文件夹</span>
+                <input id="project-path" type="text" autocomplete="off" />
+              </label>
             </section>
 
-            <!-- 右栏：新建入口 + 新手引导。 -->
-            <aside class="project-side">
-              <button id="btn-new-project" class="btn btn-primary btn-big" type="button"
-                data-i18n="btn.newProject">新建论文项目</button>
-              <section class="guide-card" id="guide-card" aria-labelledby="guide-card-title">
-                <div class="guide-card-head">
-                  <h3 id="guide-card-title" data-i18n="guide.title">新手引导</h3>
-                </div>
-                <p class="panel-desc" data-i18n="guide.desc">用一份示例论文走一遍：看问题 → 改一个数 → 变绿。不会动你的论文。</p>
-                <div class="panel-actions">
-                  <button id="btn-guide-open" class="btn btn-primary" type="button">打开示例论文</button>
-                  <button id="btn-guide-reset-card" class="btn" type="button" data-i18n="btn.guideReset">重置示例</button>
-                </div>
-                <p id="guide-card-note" class="muted-note" role="status" aria-live="polite"></p>
-              </section>
+            <!-- 右栏：窄栏（按钮宽度），只放三个按钮。 -->
+            <aside class="project-side" aria-label="项目管理动作">
+              <button id="btn-new-project" class="btn btn-primary" type="button"
+                data-i18n="btn.newProject">新建项目</button>
+              <button id="btn-guide-open" class="btn" type="button">打开示例项目</button>
+              <button id="btn-guide-reset" class="btn" type="button" data-i18n="btn.guideReset">重置示例</button>
             </aside>
           </div>
 
@@ -384,8 +379,16 @@
               <p class="panel-desc">填几项就生成一个骨架：项目声明、章节、事实账、参考文献。只生成，不编译。</p>
             </div>
           </div>
-          <p id="np-error" class="np-error" role="alert" hidden></p>
-          <form id="new-project-form" novalidate>
+          <!-- 两个页签：新建一个 / 登记一个已有的文件夹。地址栏分别是 #/project/new 与 #/project/add。 -->
+          <div class="np-tabs" role="tablist" aria-label="项目怎么来">
+            <button id="btn-np-tab-new" class="np-tab is-active" type="button" role="tab"
+              aria-selected="true" data-view="new" data-i18n="btn.npTabNew">新建项目</button>
+            <button id="btn-np-tab-add" class="np-tab" type="button" role="tab"
+              aria-selected="false" data-view="add" data-i18n="btn.npTabAdd">加入已有文件夹</button>
+          </div>
+          <div id="np-new-section">
+            <p id="np-error" class="np-error" role="alert" hidden></p>
+            <form id="new-project-form" novalidate>
             <div class="np-grid">
               <label class="field" for="np-title">
                 <span>名称 *</span>
@@ -453,6 +456,20 @@
               <button id="btn-np-cancel" class="btn" type="button" data-i18n="btn.cancel">取消</button>
             </div>
           </form>
+          </div>
+          <!-- 「加入已有文件夹」：只登记，不改文件夹里的东西。 -->
+          <div id="np-add-section" hidden>
+            <p class="panel-desc" data-i18n="np.addDesc">这个文件夹里要有 paperkit.toml。登记完就能在项目列表里选它。</p>
+            <label class="field" for="np-existing-path">
+              <span data-i18n="field.projectFolder">项目文件夹</span>
+              <input id="np-existing-path" type="text" autocomplete="off" placeholder="/Users/you/paper" />
+            </label>
+            <div class="panel-actions" style="margin: 12px 0">
+              <button id="btn-np-existing-add" class="btn btn-primary" type="button" data-i18n="btn.npJoin">加入</button>
+              <button id="btn-np-add-cancel" class="btn" type="button" data-i18n="btn.cancel">取消</button>
+            </div>
+            <p id="np-add-note" class="muted-note" role="status" aria-live="polite"></p>
+          </div>
         </section>
 
         <section id="panel-ai" class="panel" role="tabpanel" hidden>
