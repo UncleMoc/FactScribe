@@ -1578,14 +1578,12 @@ function renderSidebarProject() {
   const root = $('#sidebar-project-root');
   const empty = $('#sidebar-project-empty');
   const sections = $('#sidebar-sections');
-  const caret = $('#sidebar-project-caret');
   if (root) root.hidden = !has;
   if (empty) empty.hidden = has;
-  if (sections) sections.hidden = !has || Boolean(state.sectionsCollapsed);
-  if (caret) caret.textContent = state.sectionsCollapsed ? '▸' : '▾';
+  if (sections) sections.hidden = !has;
   if (has) {
     el.textContent = name;
-    root.title = name + '（点击展开/收起章节）';
+    root.title = name;
   }
   const btn = $('#btn-sidebar-project');
   if (btn) {
@@ -1916,7 +1914,7 @@ function renderWorkbenchSections() {
     list.innerHTML = '<div class="line-empty">还没有章节：先载入工作台项目。</div>';
     return;
   }
-  list.innerHTML = sections.map((s) => {
+  list.innerHTML = sections.map((s, index) => {
     // 只有停在工作台页签时，当前节才高亮；切到事实账/引用时不能还亮着。
     const active = s.file === current && state.tab === 'workbench';
     const c = sectionIssueCounts(s.file);
@@ -1934,6 +1932,7 @@ function renderWorkbenchSections() {
       '<button type="button" class="wb-section-item' + (active ? ' is-active' : '') +
       '" data-section="' + esc(s.file) + '" aria-current="' + (active ? 'true' : 'false') +
       '" title="' + esc(s.file) + '">' +
+      '<span class="wb-section-num">' + (index + 1) + '</span>' +
       '<span class="wb-section-name">' + esc(sectionTitle(s)) + '</span>' + badge +
       '</button>' +
       '<button type="button" class="wb-section-act" id="wb-section-rename" data-action="rename"' +
@@ -3027,10 +3026,6 @@ function wire() {
 
   // 侧栏顶部：项目按钮进项目页（导航里没有「项目」项了）
   $('#btn-sidebar-project').addEventListener('click', () => switchTab('project'));
-  $('#sidebar-project-root').addEventListener('click', () => {
-    state.sectionsCollapsed = !state.sectionsCollapsed;
-    renderSidebarProject();
-  });
 
   // 工作台：源码 / 预览
   $('#btn-wb-mode-source').addEventListener('click', () => {
