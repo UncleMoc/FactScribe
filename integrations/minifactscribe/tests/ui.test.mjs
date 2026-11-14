@@ -250,13 +250,13 @@ test('审阅卡逐行显示、不截断：截掉的行等于人没看见却签�
 
 // ---------------------------------------------------- 10. 工作台两栏
 
-test('工作台是两栏：源码+预览 / 问题+AI；章节目录搬到左侧栏', () => {
+test('工作台是两栏：源码+预览 / 问题+AI 聊天；章节目录搬到左侧栏', () => {
   assert.match(HTML, /id="wb-section-list"/, '侧栏应有章节目录');
   assert.match(HTML, /id="btn-wb-mode-source"/, '左栏应有源码切换');
   assert.match(HTML, /id="btn-wb-mode-preview"/, '左栏应有预览切换');
   assert.match(HTML, /id="wb-preview-pdf"/, '左栏应有 PDF 预览位');
-  assert.match(HTML, /id="wb-ai-input"/, '右栏应有 AI 输入框');
-  assert.match(HTML, /id="btn-wb-ai-send"/, '右栏应有 AI 发送按钮');
+  assert.match(HTML, /id="wb-chat-input"/, '右栏应有聊天输入框');
+  assert.match(HTML, /id="wb-chat-send"/, '右栏应有聊天发送按钮');
   assert.match(HTML, /id="workbench-section-select"/, '隐藏的下拉要留着：现有逻辑与测试都认它');
   assert.match(CSS, /\.wb-columns\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\) 360px/,
     '两栏要用 CSS grid：中栏 / 360px');
@@ -340,12 +340,12 @@ test('顶部冗余信息压缩到右栏 #wb-meta：大卡片与 panel-head 都�
     HTML.indexOf('id="panel-facts"'));
   assert.ok(panel.length > 0, '应能找到工作台面板');
   assert.doesNotMatch(panel, /class="panel-head"/, '工作台页签的大标题要去掉');
-  // 顺序：问题 → 紧凑信息 → AI 入口
+  // 顺序：问题 → 紧凑信息 → AI 聊天
   const metaAt = panel.indexOf('id="wb-meta"');
   const issuesAt = panel.indexOf('id="workbench-audit"');
-  const aiAt = panel.indexOf('id="wb-ai-input"');
+  const aiAt = panel.indexOf('id="wb-side-ai"');
   assert.ok(issuesAt > 0 && metaAt > issuesAt && aiAt > metaAt,
-    '右栏顺序要是：问题 → 紧凑信息 → AI 入口');
+    '右栏顺序要是：问题 → 紧凑信息 → AI 聊天');
   const meta = JS.slice(JS.indexOf('function renderWbMeta'),
     JS.indexOf('// ------------------------------------------------------- 章节增删改'));
   assert.match(meta, /条事实/, '紧凑行要写事实条数');
@@ -379,20 +379,23 @@ test('问题列表能跳到源码那一行：滚动过去并选中', () => {
   assert.match(JS, /function jumpToLine/, '应有跳转函数');
   assert.match(JS, /data-jump-line/, '每条问题要带跳转入口');
   const block = JS.slice(JS.indexOf('function jumpToLine'),
-    JS.indexOf('/** 和 AI 说'));
+    JS.indexOf('function snippetSlot'));
   assert.match(block, /setSelectionRange/, '跳转要选中那一行');
   assert.match(block, /scrollTop/, '跳转要把那一行滚进视野');
 });
 
-test('AI 入口在网页模式禁用并说明原因：需要 MiniApp 宿主', () => {
-  const block = JS.slice(JS.indexOf('function sendWbToAi'),
-    JS.indexOf('/** 只切页签'));
-  assert.ok(block.length > 0, '应有 AI 入口函数');
+test('AI 聊天在网页模式禁用并说明原因：需要 MiniApp 宿主', () => {
+  const block = JS.slice(JS.indexOf('async function sendChat'),
+    JS.indexOf('/** 聊天里的流式事件'));
+  assert.ok(block.length > 0, '应有聊天发送函数');
   assert.match(block, /!MODE\.mini/, '网页模式不许起草');
-  assert.match(block, /只改这一节：/, '要求要带上当前节');
-  assert.match(block, /#ai-instruction|#'ai-instruction'|\$\('#ai-instruction'\)/,
-    '要求写进 AI 页签的输入框');
-  assert.match(JS, /需要 MiniApp 宿主/, '要说明为什么点不了');
+  assert.match(block, /需要 MiniApp 宿主/, '要说明为什么点不了');
+  assert.match(JS, /setChatNotice\('网页模式不能起草：需要 MiniApp 宿主'\)/,
+    '网页模式的提示语要写清楚');
+  const mode = JS.slice(JS.indexOf('function applyMode'), JS.indexOf('function renderSessionBanner'));
+  assert.match(mode, /#wb-chat-input/, '网页模式要禁用聊天输入');
+  assert.match(mode, /#wb-chat-send/, '网页模式要禁用发送按钮');
+  assert.match(mode, /el\.disabled = true/, '禁用要真的生效');
 });
 
 // ------------------------------------------------- 11. hash 路由多页
@@ -1022,4 +1025,131 @@ test('章节目录：带阿拉伯数字序号，不折叠', () => {
   assert.match(JS, /wb-section-num/, '章节前要有序号位');
   assert.match(JS, /\(index \+ 1\)/, '序号从 1 开始');
   assert.doesNotMatch(JS, /sectionsCollapsed/, '不再有折叠状态');
+});
+
+// ------------------------------------------- 14. 工作台改版（预览合并 / 快捷插入 / 聊天）
+//
+// 这一版把工作台从「一堆小控件」改成「一张大编辑器 + 一个互斥右栏」：
+// 源码与预览合成右上角一个分段控件；编辑器上方有快捷插入工具栏；
+// 保存按钮是绿的；右栏在「要处理的问题」与「AI 聊天」之间切换，同时只显示一个。
+
+test('项目管理按钮的文字要居中', () => {
+  assert.match(CSS, /\.project-switch\s*\{[^}]*justify-content:\s*center/,
+    '「项目管理」按钮文字要居中');
+});
+
+test('编辑器卡片更高：约 90vh，源码与预览撑满', () => {
+  assert.match(CSS, /\.wb-columns\s*\{[^}]*--wb-editor-h:\s*90vh/,
+    '编辑器高度锚在 90vh');
+  assert.match(CSS, /\.wb-editor-card\s*\{[^}]*min-height:\s*70vh[^}]*height:\s*var\(--wb-editor-h,\s*90vh\)/,
+    '编辑器卡片：min-height 70vh / height 90vh');
+  assert.match(CSS, /\.wb-editor-card \.editor\s*\{[^}]*height:\s*100%/,
+    '源码 textarea 要撑满卡片');
+  assert.match(CSS, /#wb-preview-pdf\s*\{[^}]*height:\s*100%/,
+    '预览 embed 要撑满卡片');
+});
+
+test('源码与预览合成一个分段控件，嵌在编辑器右上角', () => {
+  const card = HTML.slice(HTML.indexOf('class="wb-editor-card"'),
+    HTML.indexOf('</section>', HTML.indexOf('class="wb-editor-card"')));
+  assert.ok(card.length > 0, '应能找到编辑器卡片');
+  assert.match(card, /id="btn-wb-mode-source"/, '源码分段要在编辑器卡片里');
+  assert.match(card, /id="btn-wb-mode-preview"/, '预览分段要在编辑器卡片里');
+  assert.match(card, /wb-col-head-right/, '分段控件要靠右');
+  assert.match(HTML, /<div class="wb-mode" role="group"/, '两个视图共用一个分段控件');
+});
+
+test('保存本节是绿色的：深浅两套都看得清', () => {
+  assert.match(HTML, /id="btn-workbench-save" class="btn btn-success"/,
+    '保存本节按钮要用 .btn-success');
+  assert.match(CSS, /\.btn-success[^{]*\{[^}]*var\(--mcode-success-action-bg\)/,
+    '绿色保存走语义变量');
+  assert.match(CSS, /\.btn-success[^{]*\{[^}]*var\(--mcode-success-action-text\)/,
+    '字色也要走语义变量');
+  const light = /html\[data-theme='light'\][\s\S]*?--mcode-success-action-bg:\s*([^;]+);/.exec(CSS);
+  const dark = /html\[data-theme='dark'\][\s\S]*?--mcode-success-action-bg:\s*([^;]+);/.exec(CSS);
+  assert.ok(light && dark, '深浅两套都要给绿色');
+  assert.notEqual(light[1].trim(), dark[1].trim(),
+    '深色模式要用另一套绿色：暗底上也要看得清');
+});
+
+test('快捷插入工具栏：模板够用，按钮等宽不换行', () => {
+  assert.match(HTML, /id="wb-snippets"/, '要有快捷插入工具栏');
+  const snippets = [...HTML.matchAll(/data-insert="([^"]*)"/g)].map((m) => m[1]);
+  assert.ok(snippets.length >= 8,
+    '快捷插入模板至少 8 个（实际 ' + snippets.length + '）');
+  for (const want of ['\\midrule', '\\sys{}', '\\cite{}', '\\ref{}', '\\label{sec:}',
+    '\\fact{}', '\\footnote{}']) {
+    assert.ok(snippets.includes(want), '要有模板：' + want);
+  }
+  const table = snippets.find((s) => s.includes('\\toprule'));
+  assert.ok(table, '表格模板要有三线表骨架');
+  assert.match(table, /\\midrule/, '三线表要有 midrule');
+  assert.match(table, /\\bottomrule/, '三线表要有 bottomrule');
+  assert.match(CSS, /\.wb-snippets\s*\{[^}]*overflow-x:\s*auto/, '不换行时横向滚动');
+  assert.match(CSS, /\.wb-snippet\s*\{[^}]*font-family:[^}]*monospace/, '按钮用等宽字体');
+});
+
+test('插入在光标处：槽位落到花括号里', () => {
+  assert.match(JS, /function insertSnippet/, '要有插入实现');
+  const block = JS.slice(JS.indexOf('function insertSnippet'), JS.indexOf('function renderWbSide'));
+  assert.ok(block.length > 0, '应有插入函数');
+  assert.match(block, /selectionStart/, '要取光标位置');
+  assert.match(block, /setSelectionRange/, '插入后要把光标放到槽位');
+  assert.match(JS, /function snippetSlot/, '要认得出模板里的槽位');
+  const slot = JS.slice(JS.indexOf('function snippetSlot'), JS.indexOf('function snippetCaret'));
+  assert.match(slot, /\{\}/, '空的 {} 就是槽位');
+  assert.match(JS, /\(begin\|end\)\$/, '环境参数不算槽位');
+});
+
+test('右栏两个面板互斥：问题 / AI 聊天', () => {
+  for (const id of ['btn-wb-side-issues', 'btn-wb-side-ai', 'wb-side-issues', 'wb-side-ai']) {
+    assert.match(HTML, new RegExp('id="' + id + '"'), '右栏要有 #' + id);
+  }
+  assert.match(HTML, /id="wb-side-ai" class="wb-side-panel" hidden/, 'AI 面板默认藏着');
+  assert.match(HTML, /id="btn-wb-side-issues"[^>]*is-active/, '默认停在问题面板');
+  const side = JS.slice(JS.indexOf('function renderWbSide'), JS.indexOf('function chatStorageKey'));
+  assert.ok(side.length > 0, '应有右栏切换函数');
+  assert.match(side, /issues\.hidden = side !== 'issues'/, '问题面板要跟着切换显隐');
+  assert.match(side, /ai\.hidden = side !== 'ai'/, 'AI 面板要跟着切换显隐');
+  assert.match(CSS, /\.wb-side-panel\s*\{[^}]*height:\s*100%/, '聊天窗口与左栏等高');
+});
+
+test('AI 聊天：记录 / 输入 / 发送，历史按项目存在本地', () => {
+  assert.match(HTML, /id="wb-chat-log"/, '要有聊天记录区');
+  assert.match(HTML, /id="wb-chat-input"/, '要有聊天输入');
+  assert.match(HTML, /id="wb-chat-send"/, '要有发送按钮');
+  assert.match(JS, /factscribe\.chat\./, 'localStorage 键要含 factscribe.chat.');
+  assert.match(JS, /localStorage\.setItem\(key/, '历史要写进 localStorage');
+  assert.match(JS, /localStorage\.getItem\(key/, '刷新后要读得回来');
+  assert.match(JS, /chat:\s*\[\]/, '聊天历史放在 state.chat 里');
+  assert.match(JS, /role === 'user' \|\| m\.role === 'assistant'/, '历史项要分清角色');
+  assert.match(JS, /wb-msg-'\s*\+\s*\(m\.role === 'user'/, '消息按角色分左右');
+  assert.match(CSS, /\.wb-msg-user\s*\{[^}]*align-self:\s*flex-end/, '用户消息靠右');
+  assert.match(CSS, /\.wb-msg-ai\s*\{[^}]*align-self:\s*flex-start/, '助手消息靠左');
+});
+
+test('聊天调宿主 agent：提示带当前节与事实账，流式追加', () => {
+  assert.match(JS, /agent\.run/, '聊天要调宿主 agent');
+  assert.match(JS, /text\.delta/, '聊天要流式接收');
+  const prompt = JS.slice(JS.indexOf('function buildSectionPrompt'), JS.indexOf('function aiPrompt'));
+  assert.ok(prompt.length > 0, '应有拼提示的函数');
+  assert.match(prompt, /当前节/, '提示里要有当前节');
+  assert.match(prompt, /事实账/, '提示里要有事实账');
+  assert.match(JS, /buildSectionPrompt\(text\)/, '聊天要复用 AI 起草那套提示');
+});
+
+test('原来的「和 AI 说」小输入框删干净了：聊天窗口取代它', () => {
+  assert.doesNotMatch(HTML, /id="wb-ai-input"/, '不该再有那个小输入框');
+  assert.doesNotMatch(JS, /wb-ai-input/, '也不该再有它的引用');
+  assert.doesNotMatch(HTML, /id="btn-wb-ai-send"/, '旧的发送按钮要删');
+  assert.doesNotMatch(JS, /sendWbToAi|openAiTab/, '旧的两个入口函数要删');
+});
+
+test('审计跑完不再写状态行：状态行只留错误与明确动作', () => {
+  assert.doesNotMatch(JS, /工作台审计完成/, '这句没有信息量，要整个删掉');
+  const block = JS.slice(JS.indexOf('async function runWorkbenchAudit'),
+    JS.indexOf('function wire'));
+  assert.ok(block.length > 0, '应有审计函数');
+  assert.match(block, /workbench-status'\)\.textContent = ''/, '跑完状态行回到空');
 });

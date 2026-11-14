@@ -18,6 +18,8 @@
   --mcode-danger: #f73646;
   --mcode-primary-action-bg: #171717;
   --mcode-primary-action-text: #ffffff;
+  --mcode-success-action-bg: #0a7d34;
+  --mcode-success-action-text: #ffffff;
   --mcode-danger-soft: #f7364614;
   --mcode-warning-soft: #f5681114;
   --mcode-success-soft: #04b54b14;
@@ -42,6 +44,8 @@
     --mcode-danger: #e31937;
     --mcode-primary-action-bg: #ffffff;
     --mcode-primary-action-text: #171717;
+    --mcode-success-action-bg: #2fbf5f;
+    --mcode-success-action-text: #10240f;
     --mcode-danger-soft: #e3193722;
     --mcode-warning-soft: #e2550722;
     --mcode-success-soft: #009c3d22;
@@ -71,6 +75,8 @@ html[data-theme='light'] {
   --mcode-danger: #f73646;
   --mcode-primary-action-bg: #171717;
   --mcode-primary-action-text: #ffffff;
+  --mcode-success-action-bg: #0a7d34;
+  --mcode-success-action-text: #ffffff;
   --mcode-danger-soft: #f7364614;
   --mcode-warning-soft: #f5681114;
   --mcode-success-soft: #04b54b14;
@@ -94,6 +100,8 @@ html[data-theme='dark'] {
   --mcode-danger: #e31937;
   --mcode-primary-action-bg: #ffffff;
   --mcode-primary-action-text: #171717;
+  --mcode-success-action-bg: #2fbf5f;
+  --mcode-success-action-text: #10240f;
   --mcode-danger-soft: #e3193722;
   --mcode-warning-soft: #e2550722;
   --mcode-success-soft: #009c3d22;
@@ -207,6 +215,10 @@ code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monos
 .btn-ghost:hover { background: var(--mcode-surface-muted); }
 .btn-danger { color: var(--mcode-danger); border-color: transparent; background: var(--mcode-danger-soft); }
 .btn-danger:hover { background: var(--mcode-danger-soft); }
+/* 绿色保存：底色与字色各一个语义变量，深浅两套都给足对比度。 */
+.btn-success,
+.btn-success:hover { background: var(--mcode-success-action-bg); color: var(--mcode-success-action-text); border-color: transparent; }
+.btn-success:hover { opacity: .88; }
 .btn-block { width: 100%; }
 .btn[disabled] { opacity: .5; cursor: not-allowed; }
 .link-btn {
@@ -258,7 +270,7 @@ code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monos
 /* 顶部的项目切换按钮：换的是整个项目，不是翻一页——所以是按钮样，不是导航项 */
 .sidebar-project { margin-bottom: 14px; }
 .project-switch {
-  width: 100%; display: flex; align-items: center; gap: 8px;
+  width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
   padding: 10px 12px; margin-bottom: 8px;
   border: 1px solid var(--mcode-border); border-radius: 10px;
   background: var(--mcode-surface-muted); color: var(--mcode-text);
@@ -647,10 +659,14 @@ code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monos
 /* ---------- 工作台两栏：源码+预览 / 问题+AI ---------- */
 /* 章节目录搬到左侧栏了；这里只剩两栏，窄于 1100px 就叠成一列。 */
 .wb-columns {
+  /* 编辑器卡片多高，右栏就多高：两栏永远一样高，聊天窗口才和左栏等高。 */
+  --wb-editor-h: 90vh;
+  /* 快捷插入条(28) + 两列之间的间距(10)：右栏的上限跟左栏对齐。 */
+  --wb-side-h: calc(var(--wb-editor-h) + 38px);
   display: grid;
   grid-template-columns: minmax(0,1fr) 360px;
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 /* 顶部只留一行操作条：大标题与说明搬到右栏的 #wb-meta。 */
 .wb-toolbar {
@@ -672,7 +688,70 @@ code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monos
   gap: 8px; flex-wrap: wrap;
 }
 .wb-col-head h3 { margin: 0; }
-.wb-ai-head { margin-top: 8px; padding-top: 12px; border-top: 1px solid var(--mcode-border); }
+
+/* ---------- 快捷插入工具栏 ---------- */
+/* 一排等宽小按钮：不换行，横向滚动；点一下在光标处插入模板。 */
+.wb-snippets {
+  display: flex; align-items: center; gap: 6px;
+  flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px;
+}
+.wb-snippet {
+  flex: none; cursor: pointer; padding: 4px 9px;
+  border: 1px solid var(--mcode-border); border-radius: 6px;
+  background: var(--mcode-surface-muted); color: var(--mcode-text-muted);
+  font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; line-height: 16px;
+  white-space: nowrap;
+}
+.wb-snippet:hover:not(:disabled) { color: var(--mcode-text); border-color: var(--mcode-accent); }
+.wb-snippet:focus-visible { outline: 2px solid var(--mcode-accent); outline-offset: 1px; }
+.wb-snippet:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ---------- 编辑器卡片：源码与预览共用 ---------- */
+/* 卡高约 90vh；源码 textarea 与 PDF 预览都撑满整张卡。 */
+.wb-editor-card {
+  display: flex; flex-direction: column; gap: 10px; min-width: 0;
+  min-height: 70vh; height: var(--wb-editor-h, 90vh);
+  padding: 12px;
+  border: 1px solid var(--mcode-border); border-radius: 12px;
+  background: var(--mcode-surface);
+}
+.wb-editor-card > .wb-col-head { flex: none; }
+.wb-editor-card .wb-pane { flex: 1 1 auto; min-height: 0; }
+.wb-editor-card #workbench-editor {
+  display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0;
+}
+.wb-editor-card .editor { flex: 1 1 auto; min-height: 0; height: 100%; }
+
+/* ---------- 右栏：问题 / AI 聊天（互斥） ---------- */
+/* 右栏跟着左栏一起变高：聊天窗口与左栏等高。
+   问题列表太长时在栏内自己滚，不把编辑器往下推。 */
+.wb-col-side { height: var(--wb-side-h, auto); max-height: var(--wb-side-h, none); }
+.wb-side-panel {
+  display: flex; flex-direction: column; gap: 10px;
+  flex: 1 1 auto; min-height: 0; height: 100%; overflow-y: auto;
+}
+.wb-side-mode .wb-mode-btn { font-size: 12px; }
+
+/* 聊天记录：用户靠右、助手靠左；新消息进来滚到底部。 */
+.wb-chat-log {
+  flex: 1 1 auto; min-height: 120px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 8px; border: 1px solid var(--mcode-border); border-radius: 10px;
+  background: var(--mcode-surface-muted);
+}
+/* 聊天面板不整体滚：记录区自己滚，输入框与发送键钉在底下。 */
+#wb-side-ai { overflow: hidden; }
+.wb-msg {
+  max-width: 92%; padding: 6px 9px; border-radius: 10px;
+  border: 1px solid var(--mcode-border);
+  font-size: 13px; line-height: 1.5;
+}
+.wb-msg-user { align-self: flex-end; background: var(--mcode-accent-soft); }
+.wb-msg-ai { align-self: flex-start; background: var(--mcode-surface); }
+.wb-msg-role { font-size: 11px; color: var(--mcode-text-subtle); margin-bottom: 2px; }
+.wb-msg-text { white-space: pre-wrap; word-break: break-word; }
+.wb-chat-field { flex: none; }
+.wb-chat-field textarea { width: 100%; resize: vertical; }
 
 /* 章节目录 */
 .wb-section-list { display: flex; flex-direction: column; gap: 4px; }
@@ -722,8 +801,9 @@ code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monos
 }
 .wb-pane { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 .wb-pane .editor { min-height: 420px; }
+/* 预览：embed 撑满整张卡，跟源码一样高。 */
 #wb-preview-pdf {
-  width: 100%; height: 640px; display: block;
+  width: 100%; height: 100%; flex: 1 1 auto; min-height: 0; display: block;
   border: 1px solid var(--mcode-border); border-radius: 12px;
   background: var(--mcode-surface-muted);
 }
@@ -742,7 +822,9 @@ code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monos
 @media (max-width: 1100px) {
   .wb-columns { grid-template-columns: 1fr; }
   .wb-pane .editor { min-height: 300px; }
-  #wb-preview-pdf { height: 480px; }
+  .wb-editor-card { min-height: 60vh; height: 70vh; }
+  /* 叠成一列后右栏不再跟着左栏限高：自己按内容长。 */
+  .wb-col-side { height: auto; max-height: none; }
 }
 
 .project-block > summary { cursor: pointer; font-size: 13px; font-weight: 600; padding: 2px 0; }

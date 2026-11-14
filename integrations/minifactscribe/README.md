@@ -141,7 +141,7 @@ node --test tests/
 工作台只接受本机 http、token 不对要拒绝。
 再加上 6 例项目登记册与启动握手（`tests/projects.test.mjs`）、9 例 Node 路由
 （`tests/server-routes.test.mjs`）与 4 例界面同步（`tests/sync.test.mjs`）：
-六组共 126 例，全部离线（握手用假解释器，不 spawn 真 Python；路由用临时 HOME）。
+六组共 137 例，全部离线（握手用假解释器，不 spawn 真 Python；路由用临时 HOME）。
 
 ---
 
@@ -184,7 +184,7 @@ integrations/minifactscribe/
 ├── .minimax-plugin/plugin.json  # 插件清单
 ├── tests/
 │   ├── styles.test.mjs          # 暗色主题不变量，7 例
-│   ├── ui.test.mjs              # 呈现层不变量，93 例（含「草稿不许回来」）
+│   ├── ui.test.mjs              # 呈现层不变量，104 例（含「草稿不许回来」）
 │   ├── workbench.test.mjs       # 本地工作台连接层，5 例
 │   ├── projects.test.mjs        # 论文项目登记册 + 启动握手，7 例
 │   ├── sync.test.mjs            # 网页与 MiniApp 界面逐字节一致，4 例
