@@ -15,8 +15,12 @@ from __future__ import annotations
 
 import hmac
 import json
+import os
 import re
 import secrets
+import shutil
+import subprocess
+import tempfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -46,6 +50,19 @@ _STATIC = {
     "/app.js": ("app.js", "text/javascript; charset=utf-8"),
     "/app.css": ("app.css", "text/css; charset=utf-8"),
 }
+
+# 预览要能真的看见论文里的图：只放行这些扩展名，其余一律 ASSET_INVALID。
+ASSET_CONTENT_TYPES = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".svg": "image/svg+xml",
+    ".pdf": "application/pdf",
+}
+# 单个文件的上限：20 MiB。超了就是 400，不给读。
+ASSET_MAX_BYTES = 20 * 1024 * 1024
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -167,7 +184,7 @@ class _Handler(BaseHTTPRequestHandler):
                     root=str(cfg.root) if cfg else None,
                     project=(cfg.name or cfg.title) if cfg else None,
                     api=["health", "capabilities", "status", "brief", "audit",
-                         "projects", "reports", "citations"]))
+                         "projects", "reports", "citations", "asset"]))
                 return
             if path == "/api/projects":
                 self._projects_view()
@@ -201,6 +218,9 @@ class _Handler(BaseHTTPRequestHandler):
                 return
             if path == "/api/pdf":
                 self._pdf()
+                return
+            if path == "/api/asset":
+                self._asset()
                 return
             self._error(404, "NOT_FOUND", "没有这个接口：%s" % path)
         except ConfigError as exc:
@@ -328,6 +348,109 @@ class _Handler(BaseHTTPRequestHandler):
             self._error(404, "PDF_MISSING", "还没有 PDF：%s" % cfg.output)
             return
         self._send_bytes(target.read_bytes(), "application/pdf")
+
+    # ------------------------------------------------------------------ 读图
+
+    def _asset(self) -> None:
+        """读论文项目里的一张图（只读）。
+
+        预览要能真的看见 `\\includegraphics{figs/a.png}`，所以给一条只读通道：
+        要 token，但不写盘、不需要 `--allow-write`。
+
+        路径必须留在项目根里：`..`、绝对路径、软链、目录都拒；
+        只放行图片与 PDF；单个文件不超过 20 MiB。
+        PDF 交给 pdftoppm 转第一页 PNG 再返回（没有 poppler 就明说）。
+        """
+        cfg = load_config(self._project())
+        root = cfg.root.resolve()
+        raw = (parse_qs(urlparse(self.path).query).get("path") or [""])[0]
+        rel = str(raw or "").strip().replace("\\", "/")
+        if not rel:
+            self._error(400, "ASSET_INVALID", "path 不能为空")
+            return
+        if rel.startswith("/") or os.path.isabs(rel) or (len(rel) > 1 and rel[1] == ":"):
+            self._error(400, "PATH_ESCAPE",
+                        "path 必须是项目内的相对路径：%s" % rel)
+            return
+        if any(part == ".." for part in rel.split("/")):
+            self._error(400, "PATH_ESCAPE", "path 不许带 ..：%s" % rel)
+            return
+        # 软链一律不给：项目里可能指着项目外的东西。
+        walk = root
+        for part in rel.split("/"):
+            if not part:
+                continue
+            walk = walk / part
+            if walk.is_symlink():
+                self._error(400, "PATH_ESCAPE", "不接受软链：%s" % rel)
+                return
+        target = root / rel
+        try:
+            resolved = target.resolve()
+            resolved.relative_to(root)
+        except (ValueError, OSError):
+            self._error(400, "PATH_ESCAPE", "路径越出项目根：%s" % rel)
+            return
+        suffix = resolved.suffix.lower()
+        if suffix not in ASSET_CONTENT_TYPES:
+            self._error(400, "ASSET_INVALID",
+                        "只支持图片与 PDF：%s" % (suffix or rel))
+            return
+        if not resolved.exists():
+            self._error(404, "ASSET_NOT_FOUND", "文件不存在：%s" % rel)
+            return
+        if not resolved.is_file():
+            self._error(400, "ASSET_INVALID", "不是普通文件：%s" % rel)
+            return
+        try:
+            size = resolved.stat().st_size
+        except OSError:
+            self._error(404, "ASSET_NOT_FOUND", "文件读不了：%s" % rel)
+            return
+        if size > ASSET_MAX_BYTES:
+            self._error(400, "ASSET_INVALID",
+                        "文件超过 %d MiB 上限：%s"
+                        % (ASSET_MAX_BYTES // 1024 // 1024, rel))
+            return
+        if suffix == ".pdf":
+            self._send_bytes(self._pdf_first_page_png(resolved), "image/png")
+            return
+        try:
+            data = resolved.read_bytes()
+        except OSError:
+            self._error(404, "ASSET_NOT_FOUND", "文件读不了：%s" % rel)
+            return
+        self._send_bytes(data, ASSET_CONTENT_TYPES[suffix])
+
+    @staticmethod
+    def _pdf_first_page_png(pdf: Path) -> bytes:
+        """PDF 的第一页转成 PNG（pdftoppm）；本机没有 poppler 就抛 POPPLER_MISSING。"""
+        binary = shutil.which("pdftoppm")
+        if not binary:
+            raise ConfigError(
+                "本机没有 pdftoppm（poppler），不能把 PDF 转成图片",
+                code="POPPLER_MISSING")
+        tmp = tempfile.mkdtemp(prefix="factscribe-asset-")
+        try:
+            prefix = os.path.join(tmp, "page")
+            proc = subprocess.run(
+                [binary, "-f", "1", "-l", "1", "-png", "-r", "150",
+                 str(pdf), prefix],
+                capture_output=True, timeout=60)
+            if proc.returncode != 0:
+                detail = (proc.stderr or b"").decode("utf-8", "replace").strip()
+                raise ConfigError(
+                    "PDF 转图片失败：%s"
+                    % (detail or "pdftoppm 退出码 %d" % proc.returncode),
+                    code="ASSET_INVALID")
+            produced = sorted(Path(tmp).glob("page*.png"))
+            if not produced:
+                raise ConfigError("PDF 转图片失败：没有产出 PNG", code="ASSET_INVALID")
+            return produced[0].read_bytes()
+        except subprocess.TimeoutExpired:
+            raise ConfigError("PDF 转图片超时", code="ASSET_INVALID")
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
 
     def _build(self) -> None:
         if not self.server.allow_build:  # type: ignore[attr-defined]

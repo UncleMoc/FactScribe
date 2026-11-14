@@ -24,6 +24,13 @@
   --mcode-warning-soft: #f5681114;
   --mcode-success-soft: #04b54b14;
   --mcode-accent-soft: #0094fc14;
+  --mcode-tex-comment: #6a737d;
+  --mcode-tex-command: #8250df;
+  --mcode-tex-env: #0550ae;
+  --mcode-tex-brace: #b35900;
+  --mcode-tex-math: #0a7d34;
+  --mcode-tex-number: #b35900;
+
 }
 
 @media (prefers-color-scheme: dark) {
@@ -50,6 +57,13 @@
     --mcode-warning-soft: #e2550722;
     --mcode-success-soft: #009c3d22;
     --mcode-accent-soft: #0077d922;
+    --mcode-tex-comment: #8b949e;
+    --mcode-tex-command: #d2a8ff;
+    --mcode-tex-env: #79c0ff;
+    --mcode-tex-brace: #ffa657;
+    --mcode-tex-math: #7ee787;
+    --mcode-tex-number: #ffa657;
+
   }
 }
 
@@ -81,6 +95,13 @@ html[data-theme='light'] {
   --mcode-warning-soft: #f5681114;
   --mcode-success-soft: #04b54b14;
   --mcode-accent-soft: #0094fc14;
+  --mcode-tex-comment: #6a737d;
+  --mcode-tex-command: #8250df;
+  --mcode-tex-env: #0550ae;
+  --mcode-tex-brace: #b35900;
+  --mcode-tex-math: #0a7d34;
+  --mcode-tex-number: #b35900;
+
 }
 
 html[data-theme='dark'] {
@@ -106,6 +127,13 @@ html[data-theme='dark'] {
   --mcode-warning-soft: #e2550722;
   --mcode-success-soft: #009c3d22;
   --mcode-accent-soft: #0077d922;
+  --mcode-tex-comment: #8b949e;
+  --mcode-tex-command: #d2a8ff;
+  --mcode-tex-env: #79c0ff;
+  --mcode-tex-brace: #ffa657;
+  --mcode-tex-math: #7ee787;
+  --mcode-tex-number: #ffa657;
+
 }
 
 * { box-sizing: border-box; }
@@ -378,6 +406,82 @@ code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monos
 .editor:focus { outline: 2px solid var(--mcode-accent); outline-offset: -1px; border-color: transparent; }
 .editor-bib { min-height: 200px; }
 .editor-half { min-height: 220px; }
+
+/* ---------- 源码高亮：pre 叠在 textarea 底下 ----------
+   输入框的文字是透明的（只留光标），底下那层 pre 显示带颜色的同一份文本。
+   两层的字体、行高、内边距、边框必须完全一致，否则光标会跟字错行。 */
+.wb-editor-wrap {
+  position: relative; display: flex;
+  flex: 1 1 auto; min-height: 0;
+}
+.wb-highlight,
+.wb-editor-input {
+  margin: 0;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px; line-height: 1.8;
+  padding: 12px 14px;
+  white-space: pre-wrap; overflow-wrap: break-word; word-break: break-word;
+  tab-size: 4;
+}
+.wb-highlight {
+  position: absolute; inset: 0; z-index: 0;
+  overflow: hidden; pointer-events: none;
+  border: 1px solid var(--mcode-border); border-radius: 12px;
+  background: var(--mcode-surface-muted);
+  color: var(--mcode-text);
+}
+.wb-highlight code { font: inherit; color: inherit; white-space: inherit; }
+.wb-editor-input {
+  position: relative; z-index: 1;
+  display: block; width: 100%;
+  flex: 1 1 auto; min-height: 0;
+  resize: none;
+  border: 1px solid transparent; border-radius: 12px;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--mcode-text);
+}
+.wb-editor-input:focus { outline: 2px solid var(--mcode-accent); outline-offset: -1px; }
+.wb-editor-input::selection { background: var(--mcode-accent-soft); }
+
+/* 高亮的每一档：浅色深色各一套变量，两边都要看得清。 */
+.tx-comment { color: var(--mcode-tex-comment); font-style: italic; }
+.tx-cmd { color: var(--mcode-tex-command); }
+.tx-env { color: var(--mcode-tex-env); font-weight: 600; }
+.tx-brace { color: var(--mcode-tex-brace); }
+.tx-math { color: var(--mcode-tex-math); }
+.tx-num { color: var(--mcode-tex-number); }
+
+/* ---------- 预览里的公式与图 ---------- */
+math { font-size: 1.02em; }
+.tex-math-block {
+  display: block; margin: 12px 0; text-align: center;
+  overflow-x: auto; overflow-y: hidden;
+}
+/* display=block 的 MathML 在浏览器里是块级盒子，内容不跟着 text-align 走；
+   改成 inline-block + auto 外边距，块级公式才真的居中。 */
+.tex-math-block math { display: inline-block; margin: 0 auto; }
+/* 认不出的命令：原样显示，等宽小字，别让它跟正文混在一起。 */
+.tex-math-raw {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .85em; color: var(--mcode-text-muted);
+}
+.tex-figure { margin: 14px 0; }
+.tex-figure-box {
+  display: flex; align-items: center; justify-content: center;
+  padding: 10px; border: 1px solid var(--mcode-border); border-radius: 10px;
+  background: var(--mcode-surface-muted);
+}
+.tex-img { max-width: 100%; height: auto; }
+.tex-img-missing {
+  padding: 6px 10px; border: 1px dashed var(--mcode-border-strong); border-radius: 8px;
+  color: var(--mcode-text-muted); font-size: 12px;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.tex-figure figcaption { margin-top: 8px; color: var(--mcode-text-muted); font-size: 13px; }
+.tex-table { border-collapse: collapse; margin: 12px 0; }
+.tex-table th, .tex-table td { border: 1px solid var(--mcode-border); padding: 6px 10px; }
+.tex-fn, .tex-cite, .tex-ref, .tex-fact { color: var(--mcode-accent); }
 
 /* ---------- line report ---------- */
 .chip-legend {
@@ -721,6 +825,8 @@ code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monos
   display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0;
 }
 .wb-editor-card .editor { flex: 1 1 auto; min-height: 0; height: 100%; }
+/* 源码输入框在叠加层里：高度由外层 wrap 给，别再撑一个 420px 的最小高度。 */
+.wb-pane .wb-editor-input { min-height: 0; height: 100%; }
 
 /* ---------- 右栏：问题 / AI 聊天（互斥） ---------- */
 /* 右栏跟着左栏一起变高：聊天窗口与左栏等高。

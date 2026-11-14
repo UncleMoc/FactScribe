@@ -22,6 +22,22 @@ from factscribe.serve import create_server  # noqa: E402
 TOKEN = "web-token"
 
 
+def png_bytes(width: int = 2, height: int = 2) -> bytes:
+    """最小合法 PNG：纯标准库拼出来，不引第三方。"""
+    import struct
+    import zlib
+
+    raw = b"".join(b"\x00" + b"\xff\x00\x00" * width for _ in range(height))
+
+    def chunk(tag: bytes, data: bytes) -> bytes:
+        return (struct.pack(">I", len(data)) + tag + data
+                + struct.pack(">I", zlib.crc32(tag + data) & 0xffffffff))
+
+    ihdr = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr)
+            + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
+
+
 class WebUITest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -437,8 +453,175 @@ class CitationsApiTest(unittest.TestCase):
         self.assertEqual(status, 200, data)
 
 
-if __name__ == "__main__":
-    unittest.main()
+class AssetApiTest(unittest.TestCase):
+    """读图接口：GET /api/asset?path=…
+
+    只读：要 token，但不写盘（不用 --allow-write）。路径必须留在项目根里。
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.root = Path(cls.tmp.name) / "paper"
+        shutil.copytree(ROOT / "examples" / "minimal", cls.root)
+        (cls.root / "figs").mkdir()
+        (cls.root / "figs" / "a.png").write_bytes(png_bytes())
+        (cls.root / "figs" / "b.svg").write_text(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4">'
+            '<rect width="4" height="4"/></svg>', encoding="utf-8")
+        cls.server, cls.token = create_server(cls.root, port=0, token=TOKEN)
+        cls.port = cls.server.server_address[1]
+        cls.base = "http://127.0.0.1:%d" % cls.port
+        cls.thread = threading.Thread(target=cls.server.serve_forever,
+                                       daemon=True)
+        cls.thread.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+        cls.server.server_close()
+        cls.thread.join(timeout=5)
+        cls.tmp.cleanup()
+
+    def _get(self, path, token=None):
+        req = urllib.request.Request(self.base + path)
+        if token:
+            req.add_header("Authorization", "Bearer " + token)
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                return resp.status, resp.headers.get("Content-Type"), resp.read()
+        except urllib.error.HTTPError as exc:
+            raw = exc.read()
+            exc.close()
+            body = json.loads(raw.decode("utf-8")) if raw else {}
+            return exc.code, body.get("error", {}).get("code"), raw
+
+    def test_png_is_served_with_image_png(self):
+        status, ctype, body = self._get(
+            "/api/asset?path=figs/a.png", token=TOKEN)
+        self.assertEqual(status, 200)
+        self.assertEqual(ctype, "image/png")
+        self.assertTrue(body.startswith(b"\x89PNG"), body[:8])
+
+    def test_svg_content_type_follows_extension(self):
+        status, ctype, body = self._get(
+            "/api/asset?path=figs/b.svg", token=TOKEN)
+        self.assertEqual(status, 200)
+        self.assertEqual(ctype, "image/svg+xml")
+        self.assertIn(b"<svg", body)
+
+    def test_escape_and_absolute_path_are_rejected(self):
+        for path in ("../x.png", "figs/../../x.png", "/etc/hosts"):
+            status, code, _ = self._get(
+                "/api/asset?path=" + urllib.parse.quote(path), token=TOKEN)
+            self.assertEqual(status, 400, path)
+            self.assertEqual(code, "PATH_ESCAPE", path)
+
+    def test_symlink_is_rejected(self):
+        link = self.root / "figs" / "link.png"
+        link.symlink_to(self.root / "figs" / "a.png")
+        try:
+            status, code, _ = self._get(
+                "/api/asset?path=figs/link.png", token=TOKEN)
+            self.assertEqual(status, 400)
+            self.assertEqual(code, "PATH_ESCAPE")
+        finally:
+            link.unlink()
+
+    def test_missing_file_is_404(self):
+        status, code, _ = self._get(
+            "/api/asset?path=figs/nope.png", token=TOKEN)
+        self.assertEqual(status, 404)
+        self.assertEqual(code, "ASSET_NOT_FOUND")
+
+    def test_unsupported_extension_is_rejected(self):
+        (self.root / "figs" / "note.txt").write_text("hi", encoding="utf-8")
+        status, code, _ = self._get(
+            "/api/asset?path=figs/note.txt", token=TOKEN)
+        self.assertEqual(status, 400)
+        self.assertEqual(code, "ASSET_INVALID")
+
+    def test_oversize_file_is_rejected(self):
+        big = self.root / "figs" / "big.png"
+        with big.open("wb") as fh:
+            fh.truncate(21 * 1024 * 1024)      # 21 MiB > 20 MiB 上限
+        try:
+            status, code, _ = self._get(
+                "/api/asset?path=figs/big.png", token=TOKEN)
+            self.assertEqual(status, 400)
+            self.assertEqual(code, "ASSET_INVALID")
+        finally:
+            big.unlink()
+
+    def test_asset_needs_token(self):
+        status, code, _ = self._get("/api/asset?path=figs/a.png")
+        self.assertEqual(status, 401)
+        self.assertEqual(code, "UNAUTHORIZED")
+
+    def test_asset_is_read_only(self):
+        # 服务没开 --allow-write，图片照样读得到：这一条不写盘。
+        status, _, _ = self._get("/api/asset?path=figs/a.png", token=TOKEN)
+        self.assertEqual(status, 200)
+
+
+MINIMAL_PDF = b"""%PDF-1.4
+1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj
+2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj
+3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj
+4 0 obj<</Length 44>>stream
+BT /F1 24 Tf 20 100 Td (Hello) Tj ET
+endstream
+endobj
+5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj
+trailer<</Root 1 0 R>>
+%%EOF
+"""
+
+
+@unittest.skipUnless(shutil.which("pdftoppm"), "缺 poppler：PDF 图转换跳过")
+class AssetPdfTest(unittest.TestCase):
+    """PDF 图：服务端用 pdftoppm 转第一页 PNG 再返回。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.root = Path(cls.tmp.name) / "paper"
+        shutil.copytree(ROOT / "examples" / "minimal", cls.root)
+        cls.pdf = cls.root / "figs.pdf"
+        cls.pdf.write_bytes(MINIMAL_PDF)
+        cls.server, cls.token = create_server(cls.root, port=0, token=TOKEN)
+        cls.port = cls.server.server_address[1]
+        cls.base = "http://127.0.0.1:%d" % cls.port
+        cls.thread = threading.Thread(target=cls.server.serve_forever,
+                                       daemon=True)
+        cls.thread.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+        cls.server.server_close()
+        cls.thread.join(timeout=5)
+        cls.tmp.cleanup()
+
+    def _get(self, path):
+        req = urllib.request.Request(self.base + path)
+        req.add_header("Authorization", "Bearer " + TOKEN)
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                return resp.status, resp.headers.get("Content-Type"), resp.read()
+        except urllib.error.HTTPError as exc:
+            raw = exc.read()
+            exc.close()
+            body = json.loads(raw.decode("utf-8")) if raw else {}
+            return exc.code, body.get("error", {}).get("code"), raw
+
+    def test_pdf_is_converted_to_png(self):
+        status, ctype, body = self._get("/api/asset?path=figs.pdf")
+        if status == 400 and ctype == "POPPLER_MISSING":
+            self.skipTest("本机没有 pdftoppm（poppler）")
+        self.assertEqual(status, 200)
+        self.assertEqual(ctype, "image/png")
+        self.assertTrue(body.startswith(b"\x89PNG"), body[:8])
 
 
 class ProjectManagementTest(unittest.TestCase):
@@ -574,3 +757,7 @@ class NoTokenAndOriginTest(unittest.TestCase):
             server.shutdown()
             server.server_close()
             thread.join(timeout=5)
+
+
+if __name__ == "__main__":
+    unittest.main()

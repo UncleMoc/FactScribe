@@ -10,6 +10,7 @@ and will not change without a major version bump.
 ## [Unreleased]
 
 ### Added
+- Preview grows images and math: `GET /api/asset?path=` serves project-local images (and converts the first page of PDF figures with `pdftoppm`), `\includegraphics` becomes an `<img>`, and a zero-dependency `texMathToMathML` renders a TeX subset as native MathML (unknown commands fall back to text). The source editor gains syntax highlighting via a mirrored `<pre>` behind a transparent textarea. Python total 1340; Node total 151.
 - Preview is now rendered as HTML instead of an embedded PDF: a small LaTeX-subset renderer turns the current section into headings, paragraphs, lists, tables, figures, citations and math placeholders on the fly, so preview no longer needs `--allow-build`. Evidence freeze/unfreeze buttons moved to the top of the right-hand issues panel. Node total 138.
 - Workbench redesign: a 90vh editor card with the source/preview segmented control in its top-right corner, a 12-button LaTeX snippet toolbar that inserts at the caret, a green save button, and a right column that toggles between issues and a project-scoped AI chat log (same height as the sidebar; history in localStorage; read-only in a browser). The meaningless "audit finished" status text is gone. Node total 137; Python total 1330.
 - Sidebar polish: widened to 300px, chapter names wrap to two lines with Arabic numbering, the vertical guide line and the collapse control are gone (the project name is a static tree root), and explanatory `.panel-desc` copy is hidden across the UI. Node total 126.
