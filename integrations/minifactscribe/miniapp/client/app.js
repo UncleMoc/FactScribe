@@ -2126,127 +2126,155 @@ function renderWbMode() {
   const pdfBtn = $('#btn-wb-mode-preview');
   if (srcBtn) srcBtn.classList.toggle('is-active', !preview);
   if (pdfBtn) pdfBtn.classList.toggle('is-active', preview);
-  const buildBtn = $('#btn-wb-preview-build');
-  if (buildBtn) {
-    const allowed = Boolean(state.workbenchProject?.build_allowed);
-    buildBtn.disabled = !allowed;
-    buildBtn.title = allowed ? '编译当前项目并显示 PDF' : '启动时没加 --allow-build';
-  }
+  if (preview) renderWbPreviewHtml();
 }
 
-/** 切到预览：已有 PDF 直接显示，没有就编译一份。 */
-async function setWbMode(mode) {
+/** 切到预览：网页渲染当前节（不编译、不依赖 PDF）。 */
+function setWbMode(mode) {
   state.wbMode = mode === 'preview' ? 'preview' : 'source';
   renderWbMode();
-  if (state.wbMode !== 'preview') return;
-  if (state.wbPdfUrl) {
-    await locateWbSectionPage();
-    return;
+}
+
+/** 去掉未转义的 % 注释。 */
+function stripTexComment(line) {
+  let out = '';
+  for (let i = 0; i < line.length; i += 1) {
+    if (line[i] === '%' && line[i - 1] !== '\\') break;
+    out += line[i];
   }
-  await buildWbPreview();
+  return out;
 }
 
-/** 预览区的状态行。 */
-function setWbPreviewState(text) {
-  const el = $('#wb-preview-state');
-  if (el) el.textContent = text;
+/** 行内 LaTeX 的最小子集：只做排版，不执行任何命令。 */
+function latexInline(text) {
+  let s = esc(text);
+  s = s.replace(/\\textbf\{([^{}]*)\}/g, '<strong>$1</strong>');
+  s = s.replace(/\\emph\{([^{}]*)\}/g, '<em>$1</em>');
+  s = s.replace(/\\textit\{([^{}]*)\}/g, '<em>$1</em>');
+  s = s.replace(/\\texttt\{([^{}]*)\}/g, '<code>$1</code>');
+  s = s.replace(/\\underline\{([^{}]*)\}/g, '<u>$1</u>');
+  s = s.replace(/\\footnote\{([^{}]*)\}/g, '<span class="tex-fn">（$1）</span>');
+  s = s.replace(/\\cite\{([^{}]*)\}/g, '<span class="tex-cite">[$1]</span>');
+  s = s.replace(/\\ref\{([^{}]*)\}/g, '<span class="tex-ref">($1)</span>');
+  s = s.replace(/\\fact\{([^{}]*)\}/g, '<span class="tex-fact">$1</span>');
+  s = s.replace(/\\label\{[^{}]*\}/g, '');
+  s = s.replace(/\$([^$]+)\$/g, '<span class="tex-math">$1</span>');
+  s = s.replace(/\\([%&_#{}])/g, '$1');
+  s = s.replace(/~/g, ' ');
+  s = s.replace(/\\\\/g, '<br>');
+  return s;
 }
 
-/** 预览区里的编译输出：编译失败时把输出摊开给人看，不能只弹个 toast。 */
-function setWbPreviewError(text) {
-  const box = $('#wb-preview-error');
+function texBlockStart(line) {
+  return /^\\(section|subsection|subsubsection|begin\{(itemize|enumerate|table|figure|equation|align)\}|\[)/.test(line);
+}
+
+/** 把一节 LaTeX 渲染成网页预览（安全：先转义，再只做白名单替换）。 */
+function latexToHtml(source) {
+  const lines = String(source || '').replace(/\r/g, '').split('\n').map(stripTexComment);
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i].trim();
+    if (!line) { i += 1; continue; }
+    let m;
+    if ((m = /^\\section\*?\{(.+)\}/.exec(line))) {
+      out.push('<h2>' + latexInline(m[1]) + '</h2>'); i += 1; continue;
+    }
+    if ((m = /^\\subsection\*?\{(.+)\}/.exec(line))) {
+      out.push('<h3>' + latexInline(m[1]) + '</h3>'); i += 1; continue;
+    }
+    if ((m = /^\\subsubsection\*?\{(.+)\}/.exec(line))) {
+      out.push('<h4>' + latexInline(m[1]) + '</h4>'); i += 1; continue;
+    }
+    if (/^\\begin\{itemize\}/.test(line) || /^\\begin\{enumerate\}/.test(line)) {
+      const ordered = /^\\begin\{enumerate\}/.test(line);
+      const items = [];
+      i += 1;
+      while (i < lines.length && !/^\\end\{(itemize|enumerate)\}/.test(lines[i].trim())) {
+        const row = lines[i].trim();
+        if (row.startsWith('\\item')) items.push(row.replace(/^\\item\s*/, ''));
+        else if (row && items.length) items[items.length - 1] += ' ' + row;
+        i += 1;
+      }
+      i += 1;
+      out.push('<' + (ordered ? 'ol' : 'ul') + '>' +
+        items.map((x) => '<li>' + latexInline(x) + '</li>').join('') +
+        '</' + (ordered ? 'ol' : 'ul') + '>');
+      continue;
+    }
+    if (/^\\begin\{equation\}/.test(line) || /^\\begin\{align\}/.test(line)
+        || line === '\\[') {
+      const close = line === '\\[' ? '\\]' : /equation/.test(line) ? '\\end{equation}' : '\\end{align}';
+      const body = [];
+      i += 1;
+      while (i < lines.length && lines[i].trim() !== close) { body.push(lines[i]); i += 1; }
+      i += 1;
+      out.push('<div class="tex-math-block">' + esc(body.join('\n').replace(/\\\\/g, '\n')) + '</div>');
+      continue;
+    }
+    if (/^\\begin\{tabular\}/.test(line)) {
+      const rows = [];
+      i += 1;
+      while (i < lines.length && !/^\\end\{tabular\}/.test(lines[i].trim())) { rows.push(lines[i]); i += 1; }
+      i += 1;
+      const cells = rows.join(' ').split(/\\\\/)
+        .map((r) => r.replace(/\\(toprule|midrule|bottomrule|hline)/g, '').trim())
+        .filter(Boolean)
+        .map((r) => r.split('&').map((c) => c.trim()));
+      if (cells.length) {
+        out.push('<table class="tex-table"><thead><tr>' +
+          cells[0].map((c) => '<th>' + latexInline(c) + '</th>').join('') +
+          '</tr></thead><tbody>' +
+          cells.slice(1).map((r) => '<tr>' + r.map((c) => '<td>' + latexInline(c) + '</td>').join('') + '</tr>').join('') +
+          '</tbody></table>');
+      }
+      continue;
+    }
+    if (/^\\begin\{figure\}/.test(line)) {
+      let graphic = '';
+      let caption = '';
+      i += 1;
+      while (i < lines.length && !/^\\end\{figure\}/.test(lines[i].trim())) {
+        const row = lines[i].trim();
+        const g = /\\includegraphics(?:\[[^\]]*\])?\{([^{}]*)\}/.exec(row);
+        if (g) graphic = g[1];
+        const c = /\\caption\{([^{}]*)\}/.exec(row);
+        if (c) caption = c[1];
+        i += 1;
+      }
+      i += 1;
+      out.push('<figure class="tex-figure"><div class="tex-figure-box">' +
+        (graphic ? esc(graphic) : '图') + '</div>' +
+        (caption ? '<figcaption>' + latexInline(caption) + '</figcaption>' : '') + '</figure>');
+      continue;
+    }
+    if (/^\\begin\{table\}/.test(line)) { i += 1; continue; }
+    if (/^\\end\{table\}/.test(line)) { i += 1; continue; }
+    // 普通段落：一直收，直到空行或下一个块
+    const para = [line];
+    i += 1;
+    while (i < lines.length) {
+      const row = lines[i].trim();
+      if (!row || texBlockStart(row)) break;
+      para.push(row); i += 1;
+    }
+    out.push('<p>' + latexInline(para.join(' ')) + '</p>');
+  }
+  return out.join('\n');
+}
+
+/** 把当前节渲染进预览框。 */
+function renderWbPreviewHtml() {
+  const box = $('#wb-preview-html');
   if (!box) return;
-  const body = String(text || '');
-  box.hidden = !body;
-  box.textContent = body;
-}
-
-/** 编译算不算成功：服务端 exit 为 0 才是成功。 */
-function buildSucceeded(data) {
-  if (!data || data.ok === false) return false;
-  if (data.exit === undefined || data.exit === null) return true;
-  return Number(data.exit) === 0;
-}
-
-/** 编译预览：先 POST wb('/build')，再 GET wb('/pdf') 取 blob。 */
-async function buildWbPreview() {
-  const project = state.workbenchProject;
-  if (!project) {
-    setWbPreviewState('还没载入工作台项目');
-    setWbPreviewError('');
-    return;
-  }
-  if (project.build_allowed === false) {
-    setWbPreviewState('不能编译：启动时没加 --allow-build');
-    setWbPreviewError('这个工作台启动时没加 --allow-build，所以这里不能编译 PDF。');
-    return;
-  }
-  setWbPreviewError('');
-  setWbPreviewState('编译中…');
-  let data;
-  try {
-    data = await api(wb('/build'), { method: 'POST' });
-  } catch (err) {
-    setWbPreviewState('编译失败：' + err.message);
-    setWbPreviewError(String(err.message || ''));
-    return;
-  }
-  if (!buildSucceeded(data)) {
-    setWbPreviewState('编译失败 · 退出码 ' + (data?.exit ?? '未知'));
-    setWbPreviewError(String(data?.output_text || '').slice(0, 2000) || '（没有编译输出）');
-    return;
-  }
-  setWbPreviewState('编译成功，正在取 PDF…');
-  try {
-    await loadWbPdfBlob();
-    setWbPreviewState('PDF 已就绪；这里不显示就点「在新标签打开 PDF」');
-    await locateWbSectionPage();
-  } catch (err) {
-    setWbPreviewState('PDF 读不出来：' + err.message);
-    setWbPreviewError(String(err.message || ''));
-  }
-}
-
-/** 取 PDF 并塞进 <embed>。 */
-async function loadWbPdfBlob() {
-  const headers = {};
-  if (!MODE.mini && state.token) headers.Authorization = 'Bearer ' + state.token;
-  const res = await fetch(wb('/pdf'), { headers });
-  if (!res.ok) throw new Error('PDF 还没生成或不可读（HTTP ' + res.status + '）');
-  const blob = await res.blob();
-  if (state.wbPdfUrl) {
-    try { URL.revokeObjectURL(state.wbPdfUrl); } catch { /* 旧 blob 回收失败不影响显示 */ }
-  }
-  state.wbPdfUrl = URL.createObjectURL(blob);
-  const embed = $('#wb-preview-pdf');
-  if (embed) embed.setAttribute('src', state.wbPdfUrl);
-  // 有些浏览器不在 <embed> 里画 PDF（Chrome 就是）。留一条真能看见的路：
-  // 同一个 blob 在新标签里打开，PDF 照常渲染。
-  const open = $('#wb-preview-open');
-  if (open) {
-    open.setAttribute('href', state.wbPdfUrl);
-    open.hidden = false;
-  }
-}
-
-/** 整篇 PDF 里，当前节在第几页；预览直接翻到那一页。 */
-async function locateWbSectionPage() {
-  if (state.wbMode !== 'preview' || !state.wbPdfUrl) return;
   const file = $('#workbench-section-select')?.value || '';
-  const embed = $('#wb-preview-pdf');
-  if (!file || !embed) return;
-  try {
-    const data = await api(wb('/section-page?file=' + encodeURIComponent(file)));
-    const page = Math.max(1, Number(data.page) || 1);
-    state.wbPdfPage = page;
-    embed.setAttribute('src', state.wbPdfUrl + '#page=' + page +
-      '&zoom=page-width&toolbar=0');
-    setWbPreviewState(data.found
-      ? '本节在第 ' + page + ' 页 · 共 ' + data.pages + ' 页'
-      : 'PDF 已就绪；没找到本节标题，从第 1 页开始');
-  } catch (err) {
-    setWbPreviewState('PDF 已就绪；页码定位失败：' + err.message);
+  if (!file) {
+    box.innerHTML = '<div class="line-empty">先选一节。</div>';
+    return;
   }
+  const text = $('#workbench-section-text')?.value || '';
+  box.innerHTML = latexToHtml(text) || '<div class="line-empty">这一节没有内容。</div>';
 }
 
 /** 问题的位置能不能跳：正文:N 跳当前节；<节文件>:<行> 跳那一节那一行。 */
@@ -2870,18 +2898,9 @@ async function buildWorkbenchPdf() {
     el.textContent = '编译成功 · ' + data.pdf_bytes + ' 字节';
     $('#btn-wb-pdf').hidden = false;
     toast('PDF 编译完成');
-    // 预览区跟着更新：编译过了就把新的 PDF 拿过来，不用再点一次预览。
-    try {
-      await loadWbPdfBlob();
-      setWbPreviewState('PDF 已就绪');
-    } catch (err) {
-      setWbPreviewState('PDF 读不出来：' + err.message);
-    }
   } else {
     el.textContent = '编译失败 · 退出码 ' + data.exit;
     el.title = String(data.output_text || '').slice(0, 2000);
-    setWbPreviewState('编译失败 · 退出码 ' + (data.exit ?? '未知'));
-    setWbPreviewError(String(data.output_text || '').slice(0, 2000) || '（没有编译输出）');
     toast('编译失败，悬停看输出');
   }
 }
@@ -3182,9 +3201,7 @@ function wire() {
     if (label) label.textContent = $('#workbench-section-select').value;
     renderAi();
     renderGuide();
-    if (state.wbMode === 'preview' && state.wbPdfUrl) {
-      locateWbSectionPage().catch(() => {});
-    }
+    if (state.wbMode === 'preview') renderWbPreviewHtml();
   });
 
   // 侧栏目录：点一下就切到那一节，并把工作台打开（章节本身就是入口）
@@ -3211,18 +3228,8 @@ function wire() {
   $('#btn-sidebar-project').addEventListener('click', () => switchTab('project'));
 
   // 工作台：源码 / 预览
-  $('#btn-wb-mode-source').addEventListener('click', () => {
-    setWbMode('source').catch((e) => toast('切换失败：' + e.message));
-  });
-  $('#btn-wb-mode-preview').addEventListener('click', () => {
-    setWbMode('preview').catch((e) => toast('预览失败：' + e.message));
-  });
-  $('#btn-wb-preview-build').addEventListener('click', () => {
-    buildWbPreview().catch((e) => {
-      setWbPreviewState('编译失败：' + e.message);
-      toast('编译失败：' + e.message);
-    });
-  });
+  $('#btn-wb-mode-source').addEventListener('click', () => setWbMode('source'));
+  $('#btn-wb-mode-preview').addEventListener('click', () => setWbMode('preview'));
 
   // 工作台：问题列表里「跳到那一行」
   $('#workbench-audit').addEventListener('click', (e) => {
