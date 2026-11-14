@@ -219,7 +219,7 @@ code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monos
 /* ---------- layout ---------- */
 .layout { display: flex; align-items: stretch; min-height: calc(100vh - 55px); }
 .sidebar {
-  width: 216px; flex: none; padding: 16px 12px;
+  width: 300px; flex: none; padding: 16px 12px;
   border-right: 1px solid var(--mcode-border);
   display: flex; flex-direction: column; gap: 2px;
   position: sticky; top: 55px; align-self: flex-start;
@@ -699,7 +699,15 @@ code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monos
   background: var(--mcode-surface-muted); color: var(--mcode-text); font-weight: 600;
   border-color: var(--mcode-border); box-shadow: inset 2px 0 0 var(--mcode-accent);
 }
-.wb-section-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wb-section-name {
+  flex: 1; min-width: 0; line-height: 18px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; white-space: normal;
+}
+.wb-section-num {
+  flex: none; min-width: 18px; color: var(--mcode-text-subtle);
+  font-size: 12px; font-variant-numeric: tabular-nums;
+}
 .wb-badge { flex: none; font-size: 11px; font-family: 'JetBrains Mono', ui-monospace, monospace; }
 .wb-badge-red { color: var(--mcode-danger); font-weight: 600; }
 .wb-badge-yellow { color: var(--mcode-warning); font-weight: 600; }
@@ -896,13 +904,9 @@ code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monos
 
 /* 左侧项目树：项目名是根，章节缩进一级，导航在分隔线下面 */
 .tree-root {
-  width: 100%; display: flex; align-items: center; gap: 6px;
-  padding: 8px 6px; border: none; border-radius: 8px; background: none;
-  color: var(--mcode-text); font-family: inherit; font-size: 15px;
-  font-weight: 600; text-align: left; cursor: pointer;
+  width: 100%; padding: 8px 6px; border-radius: 8px;
+  color: var(--mcode-text); font-size: 15px; font-weight: 600;
 }
-.tree-root:hover { background: var(--mcode-surface-muted); }
-.tree-root:focus-visible { outline: 2px solid var(--mcode-accent); outline-offset: 1px; }
 .tree-caret { flex: none; color: var(--mcode-text-muted); font-size: 12px; }
 .tree-root-name {
   min-width: 0; line-height: 20px;
@@ -913,10 +917,7 @@ code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monos
   margin: 2px 6px 10px; font-size: 12px; line-height: 18px;
   color: var(--mcode-text-muted);
 }
-.tree-children {
-  margin: 2px 0 8px 14px; padding-left: 8px;
-  border-left: 1px solid var(--mcode-border);
-}
+.tree-children { margin: 2px 0 8px 2px; padding-left: 0; }
 .tree-children-head {
   display: flex; align-items: center; justify-content: space-between;
   gap: 8px; padding: 0 4px 6px;
@@ -930,3 +931,7 @@ code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monos
 .sidebar-project { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
 .sidebar-project .tree-children { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 .sidebar-project .wb-section-list { max-height: none; overflow: visible; }
+
+
+/* 说明性小字一律不显示：界面只留操作与状态 */
+.panel-desc, .subhead .panel-desc { display: none; }

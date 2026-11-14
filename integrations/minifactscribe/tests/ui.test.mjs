@@ -654,7 +654,7 @@ test('侧栏项目名跟着工作台项目走：没有项目就写那句默认�
   assert.match(block, /sidebar-project-name/, '要写到侧栏那个名字位');
   assert.match(block, /sidebar-project-empty/, '没项目时显示那句默认提示');
   assert.match(block, /sidebar-project-root/, '有项目时显示树根');
-  assert.match(block, /sectionsCollapsed/, '根节点可折叠章节');
+  assert.doesNotMatch(block, /sectionsCollapsed/, '章节目录不再折叠');
 });
 
 test('侧栏顶部：按钮是「项目管理」，下面一行是当前项目名', () => {
@@ -1015,4 +1015,11 @@ test('MiniApp 可在浏览器打开同一个服务：按钮只在宿主里出现
   assert.match(HTML, /id="btn-wb-open-browser"/, '应有在浏览器打开按钮');
   assert.match(JS, /wb\('\/browser'\)/, '走工作台 browser 接口');
   assert.match(JS, /openBrowser\.hidden = !MODE\.mini/, '网页模式隐藏');
+});
+
+
+test('章节目录：带阿拉伯数字序号，不折叠', () => {
+  assert.match(JS, /wb-section-num/, '章节前要有序号位');
+  assert.match(JS, /\(index \+ 1\)/, '序号从 1 开始');
+  assert.doesNotMatch(JS, /sectionsCollapsed/, '不再有折叠状态');
 });
