@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import webbrowser
 import json
 import os
 import re
@@ -177,7 +178,11 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--ui", action="store_true",
                     help="同时在这个端口提供本地工作台页面（GET /）")
     sp.add_argument("--dev", action="store_true",
-                    help="开发模式：页面把 MiniApp 专属区（AI、启动、本地草稿）也显示出来，只做界面预览")
+                    help="开发模式：页面把 MiniApp 专属区（AI、启动）也显示出来，只做界面预览")
+    sp.add_argument("--no-token", dest="no_token", action="store_true",
+                    help="不要求 token（只允许本监听地址的同源请求；个人机器可用）")
+    sp.add_argument("--no-open", dest="no_open", action="store_true",
+                    help="网页模式不自动打开浏览器")
     sp.add_argument("--json", action="store_true",
                     help="启动行只出 JSON（服务仍阻塞，直到 Ctrl+C）")
 
@@ -213,7 +218,11 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--allow-build", dest="allow_build", action="store_true",
                     help="允许编译 PDF（会执行 project.build）")
     sp.add_argument("--dev", action="store_true",
-                    help="开发模式：页面把 MiniApp 专属区（AI、启动、本地草稿）也显示出来")
+                    help="开发模式：页面把 MiniApp 专属区（AI、启动）也显示出来")
+    sp.add_argument("--no-token", dest="no_token", action="store_true",
+                    help="不要求 token（只允许本监听地址的同源请求）")
+    sp.add_argument("--no-open", dest="no_open", action="store_true",
+                    help="不自动打开浏览器")
     sp.add_argument("--json", action="store_true",
                     help="启动行只出 JSON（服务仍阻塞）")
 
@@ -531,23 +540,29 @@ def cmd_doctor(args) -> int:
 def cmd_serve(args) -> int:
     """本地工作台 HTTP API：启动后阻塞，直到 Ctrl+C。"""
     project = Path(args.project) if args.project else None
+    no_token = bool(getattr(args, "no_token", False))
     server, token = create_server(
         project, host=args.host, port=args.port,
         token=(args.token or None), allow_write=bool(args.allow_write),
         serve_ui=bool(getattr(args, "ui", False)),
-        allow_build=bool(args.allow_build))
+        allow_build=bool(args.allow_build),
+        require_token=not no_token)
     host, port = server.server_address[0], server.server_address[1]
     url = "http://%s:%d" % (host, port)
     dev = bool(getattr(args, "dev", False))
     ui_url = ""
     if getattr(args, "ui", False):
-        ui_url = url + "/?token=" + token + ("&dev=1" if dev else "")
+        query = ("token=" + token if token else "")
+        if dev:
+            query = (query + "&" if query else "") + "dev=1"
+        ui_url = url + "/" + ("?" + query if query else "")
     command = "web" if getattr(args, "web", False) else "serve"
     if args.json:
         print(json.dumps({
             "event": "listening", "ok": True, "command": command,
             "url": url, "ui": ui_url or None,
             "token": token,
+            "token_required": not no_token,
             "project": str(server.project) if server.project else None,
             "api": ["/api/health", "/api/capabilities", "/api/status",
                     "/api/brief", "/api/audit", "/api/project"],
@@ -560,16 +575,24 @@ def cmd_serve(args) -> int:
         print("URL：%s" % url)
         if ui_url:
             print("页面：%s" % ui_url)
-        print("Token：%s" % token)
+        if token:
+            print("Token：%s" % token)
         mode = "可写（--allow-write）" if args.allow_write else "只读"
         if args.allow_build:
             mode += " · 可编译（--allow-build）"
         if dev:
             mode += " · 开发模式（显示 MiniApp 专属区）"
+        if no_token:
+            mode += " · 无 token（只允许本机同源）"
         print("模式：%s" % mode)
         print("接口：/api/health  /api/capabilities  /api/status  "
               "/api/brief  /api/audit  /api/project")
         print("只绑回环；按 Ctrl+C 停止。", flush=True)
+        if ui_url and not getattr(args, "no_open", False):
+            try:
+                webbrowser.open(ui_url)
+            except Exception:  # noqa: BLE001 - 打不开浏览器不影响服务
+                pass
     try:
         server.serve_forever()
     except KeyboardInterrupt:

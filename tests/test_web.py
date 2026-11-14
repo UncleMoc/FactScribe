@@ -510,3 +510,67 @@ class ProjectManagementTest(unittest.TestCase):
         self.assertEqual(data["projects"], [])
         status, data = self._call("/api/status")
         self.assertEqual(status, 400)
+
+
+class NoTokenAndOriginTest(unittest.TestCase):
+    """无 token 模式 + 同源检查：token 可选，跨源一律拒。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.server, cls.token = create_server(
+            ROOT / "examples" / "minimal", port=0, token="",
+            require_token=False)
+        cls.port = cls.server.server_address[1]
+        cls.base = "http://127.0.0.1:%d" % cls.port
+        cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
+        cls.thread.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+        cls.server.server_close()
+        cls.thread.join(timeout=5)
+
+    def _get(self, path, origin=None):
+        req = urllib.request.Request(self.base + path)
+        if origin:
+            req.add_header("Origin", origin)
+        try:
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                return resp.status, json.loads(resp.read())
+        except urllib.error.HTTPError as exc:
+            body = exc.read()
+            exc.close()
+            return exc.code, json.loads(body)
+
+    def test_no_token_mode_serves_api(self):
+        status, data = self._get("/api/project")
+        self.assertEqual(200, status, data)
+        self.assertTrue(data.get("ok"))
+
+    def test_cross_origin_is_rejected(self):
+        status, data = self._get("/api/project", origin="http://evil.example")
+        self.assertEqual(403, status)
+        self.assertEqual("CROSS_ORIGIN", data["error"]["code"])
+
+    def test_same_origin_is_allowed(self):
+        status, _ = self._get("/api/project", origin=self.base)
+        self.assertEqual(200, status)
+
+    def test_token_mode_still_rejects_cross_origin(self):
+        server, token = create_server(ROOT / "examples" / "minimal", port=0, token="t2")
+        port = server.server_address[1]
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            req = urllib.request.Request("http://127.0.0.1:%d/api/project" % port)
+            req.add_header("Authorization", "Bearer " + token)
+            req.add_header("Origin", "http://evil.example")
+            with self.assertRaises(urllib.error.HTTPError) as ctx:
+                urllib.request.urlopen(req, timeout=5)
+            self.assertEqual(403, ctx.exception.code)
+            ctx.exception.close()
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=5)

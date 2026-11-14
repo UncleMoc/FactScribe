@@ -738,6 +738,9 @@ function applyMode() {
       ? 'FactScribe · 数字与引用的机械闸门'
       : '本地工作台 · 真实论文项目';
   }
+  // 「在浏览器打开」只有 MiniApp 需要：网页本来就在浏览器里。
+  const openBrowser = $('#btn-wb-open-browser');
+  if (openBrowser) openBrowser.hidden = !MODE.mini;
   // 只有「AI 起草」是宿主专属页签：网页里没有宿主 agent。
   const hostTabs = ['ai'];
   for (const tab of hostTabs) {
@@ -2746,6 +2749,11 @@ function wire() {
   });
   $('#btn-workbench-disconnect').addEventListener('click', () => {
     disconnectWorkbench().catch((e) => toast('断开失败：' + e.message));
+  });
+  $('#btn-wb-open-browser').addEventListener('click', () => {
+    api(wb('/browser'), { method: 'POST' })
+      .then(() => toast('已在本机浏览器打开（同一个服务）'))
+      .catch((e) => toast('打开浏览器失败：' + e.message));
   });
   $('#btn-workbench-audit').addEventListener('click', () => {
     runWorkbenchAudit().catch((e) => { $('#workbench-status').textContent = '审计失败：' + e.message; toast('审计失败：' + e.message); });

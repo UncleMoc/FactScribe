@@ -50,6 +50,11 @@ URL：http://127.0.0.1:<port>
 页面首次打开会读取 URL 里的 token，存到 `sessionStorage`，然后把它从地址栏移除。
 没有 token 时页面显示输入框；token 只用于本机 API。
 
+`web` 启动后默认用系统浏览器打开带 token 的页面（`--no-open` 关闭）；
+`--no-token` 则完全不要求 token，只靠同源检查：带 `Origin` 的请求必须是本监听地址，
+否则 403 `CROSS_ORIGIN`。MiniApp 一键启动仍由 Node 保管 token，并在工作台提供
+「在浏览器打开」按钮，打开的是同一个服务。
+
 ## 2. 页面
 
 「工作台」页签（两种模式都有）：

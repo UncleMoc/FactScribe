@@ -951,3 +951,10 @@ test('预览会定位到本节页：走 wb(/section-page)，不是只看整本',
   assert.match(JS, /wb\('\/section-page\?file='/, '页码走工作台接口');
   assert.match(JS, /#page=/, 'embed 要带页码片段');
 });
+
+
+test('MiniApp 可在浏览器打开同一个服务：按钮只在宿主里出现', () => {
+  assert.match(HTML, /id="btn-wb-open-browser"/, '应有在浏览器打开按钮');
+  assert.match(JS, /wb\('\/browser'\)/, '走工作台 browser 接口');
+  assert.match(JS, /openBrowser\.hidden = !MODE\.mini/, '网页模式隐藏');
+});

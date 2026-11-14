@@ -545,6 +545,12 @@ export async function start(context) {
                 '/api/build', 'POST', body));
             return;
           }
+          if (request.method === 'POST' && path === '/api/workbench/browser') {
+            if (!workbench?.token) throw new Error('还没有可用 token');
+            openInBrowser(workbench.url + '/?token=' + encodeURIComponent(workbench.token));
+            sendJson(response, 200, { ok: true, opened: true });
+            return;
+          }
           if (request.method === 'GET' && path === '/api/workbench/section-page') {
             const file = new URL(request.url ?? '/', 'http://x').searchParams.get('file') || '';
             sendJson(response, 200,

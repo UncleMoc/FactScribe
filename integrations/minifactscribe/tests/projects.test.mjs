@@ -89,9 +89,9 @@ test('登记册：置顶、去重、限量、可移除，落盘在 ~/.factscribe
 
 test('启动命令固定：只换项目路径，开关只加两个已知参数', () => {
   assert.deepEqual(serveArgs({ project: '/x' }),
-    ['serve', '/x', '--port', '0', '--json']);
+    ['serve', '/x', '--port', '0', '--json', '--ui']);
   assert.deepEqual(serveArgs({ project: '/x', allowWrite: true, allowBuild: true }),
-    ['serve', '/x', '--port', '0', '--json', '--allow-write', '--allow-build']);
+    ['serve', '/x', '--port', '0', '--json', '--ui', '--allow-write', '--allow-build']);
 });
 
 test('一键启动：读首行 JSON 握手，停止时收掉子进程', async () => {
@@ -136,4 +136,14 @@ test('一键启动：解释器不存在时给出可操作提示', async () => {
     process.env.PATH = savedPath;
     rmSync(home, { recursive: true, force: true });
   }
+});
+
+
+test('在浏览器打开：命令固定，按平台选，不拼 shell', async () => {
+  const { browserCommand } = await import('../miniapp/node/launcher.mjs');
+  assert.deepEqual(browserCommand('http://127.0.0.1:1/?token=x', 'darwin'),
+    { cmd: 'open', args: ['http://127.0.0.1:1/?token=x'] });
+  assert.equal(browserCommand('http://x', 'linux').cmd, 'xdg-open');
+  assert.equal(browserCommand('http://x', 'win32').cmd, 'rundll32');
+  assert.match(browserCommand('http://x', 'darwin').args[0], /^http:/);
 });
