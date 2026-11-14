@@ -1158,3 +1158,192 @@ test('证据冻结/解冻按钮在右栏问题面板顶部', () => {
   assert.match(issues, /id="btn-wb-unfreeze"/, '解冻按钮在问题面板里');
   assert.match(issues, /id="wb-evidence-meta"/, '证据状态也在顶部');
 });
+
+// --------------------------------------------- 9. 读图 / MathML / 语法高亮
+//
+// 三件事各自要成立：
+//   1. 论文里的图要真的看得见（走 /api/asset，MiniApp 走 Node 代理）；
+//   2. 公式要渲染成 <math>，不是一堆反斜杠；
+//   3. 源码面板要分颜色：注释、命令、环境、花括号、数学、数字。
+
+/**
+ * 从 app.js 里取出一个顶层函数的源码。
+ *
+ * 结束位置找的是「顶格的 }」——app.js 里的顶层函数都这么写，
+ * 嵌套的括号都在缩进里。比数花括号可靠：函数体里有字符串也有正则，
+ * 两者都带花括号，数��会数错。
+ */
+function functionSource(name) {
+  const start = JS.indexOf('function ' + name + '(');
+  assert.notEqual(start, -1, 'app.js 里找不到 ' + name);
+  const end = JS.indexOf('\n}\n', start);
+  assert.notEqual(end, -1, name + ' 的函数体没有闭合');
+  return JS.slice(start, end + 2);
+}
+
+/**
+ * 取一个 const 箭头的源码（esc / has 这种）。
+ *
+ * 结尾找的是「空行之前最后一个分号」：这两条里都带分号（'&#39;'），
+ * 按分号截会截断。
+ */
+function constSource(prefix) {
+  const start = JS.indexOf(prefix);
+  assert.notEqual(start, -1, 'app.js 里找不到 ' + prefix);
+  const stop = JS.indexOf('\n\n', start);
+  const chunk = JS.slice(start, stop);
+  return chunk.slice(0, chunk.lastIndexOf(';') + 1);
+}
+
+/**
+ * 把 app.js 里的纯函数拿到 node 里跑：不引第三方，也不起浏览器。
+ * 只取没有副作用的那几个（预览渲染、高亮、地址拼接）。
+ */
+function loadPure() {
+  const src = [
+    'const MODE = { mini: false, dev: false, showHostUi: false };',
+    'const state = { token: "t" };',
+    constSource('const esc ='),
+    constSource('const has ='),
+    constSource('const TEX_GREEK ='),
+    constSource('const TEX_OPS ='),
+    constSource('const TEX_ESCAPED ='),
+    functionSource('wb'),
+    functionSource('assetUrl'),
+    functionSource('texMathParse'),
+    functionSource('texMathToMathML'),
+    functionSource('highlightTex'),
+    functionSource('stripTexComment'),
+    functionSource('texBlockStart'),
+    functionSource('latexInline'),
+    functionSource('texMathBlockHtml'),
+    functionSource('texFigureBody'),
+    functionSource('latexToHtml'),
+    'return { latexToHtml, texMathToMathML, highlightTex, assetUrl, latexInline };',
+  ].join('\n');
+  return new Function(src)();
+}
+
+test('源码编辑器是叠加结构：高亮层在底下，输入框在上层', () => {
+  assert.match(HTML, /id="wb-editor-wrap"/, '要有叠加层的容器');
+  assert.match(HTML, /class="wb-editor-wrap"/, '容器也要有样式类');
+  assert.match(
+    HTML,
+    /<pre id="wb-highlight" class="wb-highlight" aria-hidden="true"><code><\/code><\/pre>/,
+    '高亮层是 pre > code，且对读屏软件隐藏'
+  );
+  assert.match(
+    HTML,
+    /<textarea id="workbench-section-text" class="editor wb-editor-input"/,
+    '输入框要带叠加层的类'
+  );
+  const wrap = HTML.slice(HTML.indexOf('id="wb-editor-wrap"'), HTML.indexOf('id="workbench-section-text"'));
+  assert.ok(wrap.includes('id="wb-highlight"'), '高亮层要在输入框前面（底下那层）');
+});
+
+test('输入框文字透明、光标留着：高亮层与输入框字体行高一致', () => {
+  const rule = CSS.slice(CSS.indexOf('.wb-editor-input {'), CSS.indexOf('.wb-editor-input:focus'));
+  assert.match(rule, /color:\s*transparent/, '输入框文字要透明');
+  assert.match(rule, /caret-color:\s*var\(--mcode-text\)/, '光标要看得见');
+  assert.match(rule, /background:\s*transparent/, '输入框底色要透明，让底下那层透出来');
+  assert.match(CSS, /\.wb-highlight\s*\{[^}]*position:\s*absolute/, '高亮层要绝对定位叠在底下');
+  // 两层的字体与行高必须是同一套值，否则光标会跟字错行。
+  const pre = CSS.slice(CSS.indexOf('.wb-highlight,'), CSS.indexOf('.wb-highlight {'));
+  assert.match(pre, /font-family:\s*'JetBrains Mono'/, '两层用同一个字体');
+  assert.match(pre, /line-height:\s*1\.8/, '两层用同一个行高');
+  assert.match(pre, /padding:\s*12px 14px/, '两层用同一份内边距');
+});
+
+test('高亮配色在浅色与深色下各有一份', () => {
+  const names = ['comment', 'command', 'env', 'brace', 'math', 'number'];
+  for (const name of names) {
+    const hits = CSS.match(new RegExp('--mcode-tex-' + name + ':\\s*(#[0-9a-f]{6})', 'gi')) || [];
+    assert.equal(hits.length, 4, name + ' 应在四套主题里各定义一次');
+  }
+  assert.match(CSS, /\.tx-comment\s*\{[^}]*color:\s*var\(--mcode-tex-comment\)/, '注释要有颜色');
+  assert.match(CSS, /\.tx-cmd\s*\{[^}]*color:\s*var\(--mcode-tex-command\)/, '命令要有颜色');
+  assert.match(CSS, /\.tx-env\s*\{[^}]*color:\s*var\(--mcode-tex-env\)/, '环境要有颜色');
+  assert.match(CSS, /\.tx-math\s*\{[^}]*color:\s*var\(--mcode-tex-math\)/, '数学要有颜色');
+});
+
+test('读图地址：网页走 /api/asset，MiniApp 走 Node 代理', () => {
+  const pure = loadPure();
+  assert.match(pure.assetUrl('figs/a.png'), /^\/api\/asset\?path=figs%2Fa\.png/, '网页直连 Python');
+  assert.match(JS, /MODE\.mini \? '\/api\/workbench' : '\/api'/, 'MiniApp 走 Node 代理');
+  assert.match(JS, /wb\('\/asset'\)/, '读图也要走 wb 适配');
+  assert.match(SERVER, /'\/api\/workbench\/asset'/, 'Node 侧要有读图代理');
+});
+
+test('预览里的公式是 math 元素，不是纯文本', () => {
+  const pure = loadPure();
+  const html = pure.latexToHtml('代价是 $x^2 + \\alpha$ 这么大。');
+  assert.match(html, /<math/, '行内公式要渲染成 math 元素');
+  assert.match(html, /<msup><mi>x<\/mi><mn>2<\/mn><\/msup>/, '上标要用 msup，数字不能丢');
+  assert.match(html, /<mi>α<\/mi>/, '希腊字母要认出来');
+  assert.doesNotMatch(html, /\$\^2/, '不该再留原始的 $…$');
+});
+
+test('分数、根号与上下标都认得', () => {
+  const pure = loadPure();
+  const out = pure.texMathToMathML('\\frac{a_1}{x^2} + \\sqrt{y}');
+  assert.match(out, /<mfrac>/, '分数要用 mfrac');
+  assert.match(out, /<msub><mi>a<\/mi><mn>1<\/mn><\/msub>/, '下标要用 msub');
+  assert.match(out, /<msup><mi>x<\/mi><mn>2<\/mn><\/msup>/, '上标要用 msup');
+  assert.match(out, /<msqrt>/, '根号要用 msqrt');
+});
+
+test('块级公式独立成行：$$…$$ 与 equation 环境都算', () => {
+  const pure = loadPure();
+  const inline = pure.latexToHtml('$$E = mc^2$$');
+  assert.match(inline, /display="block"/, '$$…$$ 要独立成行');
+  const env = pure.latexToHtml('\\begin{equation}\nE = mc^2\n\\end{equation}');
+  assert.match(env, /display="block"/, 'equation 环境要独立成行');
+  assert.match(env, /class="tex-math-block"/, '块级样式要留着');
+});
+
+test('认不出的命令原样显示，不崩', () => {
+  const pure = loadPure();
+  const out = pure.texMathToMathML('\\foo{x}');
+  assert.match(out, /<mtext class="tex-math-raw">\\foo<\/mtext>/, '认不出的命令要原样显示');
+  assert.match(CSS, /\.tex-math-raw\s*\{[^}]*font-family/, '原样显示的要用等宽小字');
+});
+
+test('预览里的图走读图接口，坏图有占位', () => {
+  const pure = loadPure();
+  const html = pure.latexToHtml('\\begin{figure}\n  \\includegraphics{figs/a.png}\n  \\caption{结果}\n\\end{figure}');
+  assert.match(html, /<img class="tex-img"/, '图要渲染成 img');
+  assert.match(html, /\/api\/asset\?path=figs%2Fa\.png/, '图片地址走读图接口');
+  assert.match(html, /onerror=/, '读不出来时要给占位');
+  assert.match(html, /data-missing="figs\/a\.png"/, '占位要显示文件名');
+});
+
+test('高亮分得出注释、命令、环境、花括号、数学、数字', () => {
+  const pure = loadPure();
+  const out = pure.highlightTex('% 这是注释\n\\begin{figure}\n\\caption{x}\n$y^2$ { } 42');
+  assert.match(out, /<span class="tx-comment">% 这是注释<\/span>/, '注释要单独一段');
+  assert.match(out, /<span class="tx-env">\\begin\{figure\}<\/span>/, '环境要整体一个颜色');
+  assert.match(out, /<span class="tx-cmd">\\caption<\/span>/, '命令要有颜色');
+  assert.match(out, /<span class="tx-math">\$y\^2\$<\/span>/, '数学要有颜色');
+  assert.match(out, /<span class="tx-brace">\{<\/span>/, '花括号要有颜色');
+  assert.match(out, /<span class="tx-num">42<\/span>/, '数字要有颜色');
+});
+
+test('高亮先转义：源码里的尖括号不能变成真的标签', () => {
+  const pure = loadPure();
+  const out = pure.highlightTex('a < b && c > d');
+  assert.doesNotMatch(out, /<b\b/, '不能吐出真的标签');
+  assert.match(out, /&lt;/, '尖括号要转义');
+});
+
+test('输入时更新高亮，滚动时两层同步', () => {
+  assert.match(JS, /addEventListener\('input', \(\) => updateHighlight\(\)\)/, '输入要更新高亮');
+  assert.match(JS, /addEventListener\('scroll', \(\) => syncHighlightScroll\(\)\)/, '滚动要同步');
+  assert.match(JS, /pre\.scrollTop = ta\.scrollTop/, '滚动同步的方向要对');
+  assert.match(JS, /insertSnippet[\s\S]{0,900}updateHighlight\(\)/, '插入片段后也要更新');
+});
+
+test('太大的文件关闭高亮并说清楚为什么', () => {
+  assert.match(JS, /HIGHLIGHT_MAX_CHARS = 200 \* 1024/, '超过 200 KB 就关掉高亮');
+  assert.match(HTML, /id="wb-highlight-note"/, '提示元素要在页面里');
+  assert.match(JS, /wb-highlight-note/, '要有一行提示');
+});

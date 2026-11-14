@@ -583,6 +583,36 @@ export async function start(context) {
             response.end(buffer);
             return;
           }
+          if (request.method === 'GET' && path === '/api/workbench/asset') {
+            // 读图：二进制原样转发，上游给什么 Content-Type 就给什么。
+            // 上游的 400/404 原样带回（路径越界是用户的问题，不该变成 502）。
+            const rel = new URL(request.url ?? '/', 'http://x').searchParams.get('path') || '';
+            const upstream = await fetch(
+              workbench.url + '/api/asset?path=' + encodeURIComponent(rel),
+              {
+                headers: { authorization: `Bearer ${workbench.token}` },
+                signal: AbortSignal.timeout(30000),
+              }
+            );
+            if (!upstream.ok) {
+              const detail = await upstream.text();
+              response.writeHead(upstream.status, {
+                'content-type': upstream.headers.get('content-type')
+                  || 'application/json; charset=utf-8',
+                'cache-control': 'no-store',
+              });
+              response.end(detail);
+              return;
+            }
+            const buffer = Buffer.from(await upstream.arrayBuffer());
+            response.writeHead(200, {
+              'content-type': upstream.headers.get('content-type') || 'application/octet-stream',
+              'content-length': buffer.length,
+              'cache-control': 'no-store',
+            });
+            response.end(buffer);
+            return;
+          }
           sendJson(response, 404, {
             ok: false,
             error: { code: 'NOT_FOUND', message: '没有这个接口：' + path },

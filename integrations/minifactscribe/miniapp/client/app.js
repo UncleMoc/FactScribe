@@ -29,6 +29,19 @@ function wb(suffix) {
   return (MODE.mini ? '/api/workbench' : '/api') + suffix;
 }
 
+/**
+ * 论文里一张图的地址：MiniApp 走 Node 代理，网页直连 Python。
+ *
+ * 网页这一侧要把 token 带上——<img> 带不了请求头，只能走查询串。
+ * MiniApp 的 token 在 Node 那头，页面不用也不该知道。
+ */
+function assetUrl(path) {
+  const rel = String(path || '').trim().replace(/^\.?\//, '');
+  let url = wb('/asset') + '?path=' + encodeURIComponent(rel);
+  if (!MODE.mini && state.token) url += '&token=' + encodeURIComponent(state.token);
+  return url;
+}
+
 function tokenFromUrl() {
   const url = new URL(location.href);
   const token = url.searchParams.get('token') || '';
@@ -1818,6 +1831,7 @@ function renderWorkbench() {
     state.currentSection = select.value || '';
     const row = project.sections.find((s) => s.file === select.value);
     $('#workbench-section-text').value = row ? row.text : '';
+    updateHighlight();
     $('#workbench-save-state').textContent = project.read_only
       ? '工作台是只读模式（启动时没加 --allow-write）'
       : '可写';
@@ -2145,9 +2159,235 @@ function stripTexComment(line) {
   return out;
 }
 
+// ------------------------------------------- MathML：LaTeX 数学子集 → MathML
+//
+// 只认一小撮：分组、上下标、\frac、\sqrt、希腊字母、常用符号、
+// \text/\mathrm/\mathbf、\left( \right)。认不出的命令原样显示（\foo），
+// 不崩也不吞——论文里的公式什么写法都有，崩了就没法预览。
+
+const TEX_GREEK = {
+  alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', epsilon: 'ε',
+  zeta: 'ζ', eta: 'η', theta: 'θ', iota: 'ι', kappa: 'κ',
+  lambda: 'λ', mu: 'μ', nu: 'ν', xi: 'ξ', pi: 'π', rho: 'ρ',
+  sigma: 'σ', tau: 'τ', upsilon: 'υ', phi: 'φ', chi: 'χ',
+  psi: 'ψ', omega: 'ω',
+  Gamma: 'Γ', Delta: 'Δ', Theta: 'Θ', Lambda: 'Λ', Xi: 'Ξ',
+  Pi: 'Π', Sigma: 'Σ', Upsilon: 'Υ', Phi: 'Φ', Psi: 'Ψ',
+  Omega: 'Ω', varphi: 'φ', varepsilon: 'ε', vartheta: 'θ',
+};
+
+const TEX_OPS = {
+  cdot: '⋅', times: '×', pm: '±', mp: '∓', div: '÷',
+  le: '≤', leq: '≤', ge: '≥', geq: '≥',
+  ne: '≠', neq: '≠', equiv: '≡', approx: '≈', sim: '∼',
+  propto: '∝', infty: '∞', partial: '∂', nabla: '∇',
+  sum: '∑', prod: '∏', int: '∫', oint: '∮',
+  in: '∈', ni: '∋', subset: '⊂', supset: '⊃', subseteq: '⊆',
+  supseteq: '⊇', cup: '∪', cap: '∩',
+  to: '→', rightarrow: '→', leftarrow: '←', Rightarrow: '⇒',
+  Leftarrow: '⇐', leftrightarrow: '↔', mapsto: '↦',
+  forall: '∀', exists: '∃', neg: '¬', lnot: '¬',
+  land: '∧', lor: '∨', wedge: '∧', vee: '∨',
+  ll: '≪', gg: '≫', angle: '∠', therefore: '∴', because: '∵',
+  dots: '…', ldots: '…', cdots: '⋯',
+};
+
+const TEX_ESCAPED = {
+  '%': '%', '&': '&', '#': '#', '$': '$', '_': '_',
+  '{': '{', '}': '}', ' ': ' ',
+};
+
+/**
+ * 一段 LaTeX 数学 → MathML。
+ *
+ * display=true 出 <math display="block">（独立成行），否则是行内公式。
+ * 纯函数：同样的输入永远给同样的输出，不碰 DOM。
+ */
+function texMathToMathML(src, display) {
+  const body = texMathParse(String(src == null ? '' : src));
+  return '<math xmlns="http://www.w3.org/1998/Math/MathML" class="tex-math"'
+    + (display ? ' display="block"' : '') + '>' + body + '</math>';
+}
+
+/** LaTeX 数学 → MathML 片段（没有 <math> 外壳）。 */
+function texMathParse(src) {
+  const s = String(src == null ? '' : src);
+  let i = 0;
+
+  /** 读一个命令：\name 或 \X。 */
+  function readCommand() {
+    const start = i;
+    i += 1;
+    if (i >= s.length) return { name: '', raw: '\\' };
+    let name = '';
+    if (/[a-zA-Z]/.test(s[i])) {
+      while (i < s.length && /[a-zA-Z]/.test(s[i])) { name += s[i]; i += 1; }
+    } else {
+      name = s[i];
+      i += 1;
+    }
+    return { name, raw: s.slice(start, i) };
+  }
+
+  /** 读一段花括号里的原文（不解析）：给 \text 用。 */
+  function readRawGroup() {
+    while (i < s.length && /\s/.test(s[i])) i += 1;
+    if (i >= s.length) return '';
+    if (s[i] !== '{') { const one = s[i]; i += 1; return one; }
+    let depth = 0;
+    let j = i;
+    for (; j < s.length; j += 1) {
+      if (s[j] === '\\') { j += 1; continue; }
+      if (s[j] === '{') depth += 1;
+      else if (s[j] === '}') { depth -= 1; if (depth === 0) { j += 1; break; } }
+    }
+    const inner = s.slice(i + 1, Math.max(i + 1, j - 1));
+    i = j;
+    return inner;
+  }
+
+  /** 读一个参数：{…} 解析成 mrow，单个字符就一个原子。 */
+  function readArg() {
+    while (i < s.length && /\s/.test(s[i])) i += 1;
+    if (i >= s.length) return '<mrow></mrow>';
+    if (s[i] === '{') { i += 1; return '<mrow>' + readSeq(true) + '</mrow>'; }
+    return readAtom();
+  }
+
+  /** 一个原子：分组、命令、或者单个字符。 */
+  function readAtom() {
+    const ch = s[i];
+    if (ch === undefined) return '';
+    if (ch === '{') { i += 1; return '<mrow>' + readSeq(true) + '</mrow>'; }
+    if (ch === '\\') return readCommandNode();
+    if (/\s/.test(ch)) { i += 1; return ''; }
+    if (/[0-9]/.test(ch)) {
+      let n = '';
+      while (i < s.length && /[0-9]/.test(s[i])) { n += s[i]; i += 1; }
+      if (s[i] === '.') {
+        n += '.';
+        i += 1;
+        while (i < s.length && /[0-9]/.test(s[i])) { n += s[i]; i += 1; }
+      }
+      return '<mn>' + esc(n) + '</mn>';
+    }
+    if (/[a-zA-Z]/.test(ch)) { i += 1; return '<mi>' + esc(ch) + '</mi>'; }
+    i += 1;
+    return '<mo>' + esc(ch) + '</mo>';
+  }
+
+  /** 一个命令：能认的转 MathML，认不出的原样显示。 */
+  function readCommandNode() {
+    const cmd = readCommand();
+    const name = cmd.name;
+    if (name === 'frac') {
+      return '<mfrac>' + readArg() + readArg() + '</mfrac>';
+    }
+    if (name === 'sqrt') {
+      while (i < s.length && /\s/.test(s[i])) i += 1;
+      if (s[i] === '[') {          // 根指数：先不做，跳过它
+        let depth = 0;
+        while (i < s.length) {
+          if (s[i] === '[') depth += 1;
+          else if (s[i] === ']') { depth -= 1; if (depth === 0) { i += 1; break; } }
+          i += 1;
+        }
+      }
+      return '<msqrt>' + readArg() + '</msqrt>';
+    }
+    if (name === 'text' || name === 'textrm') {
+      return '<mtext>' + esc(readRawGroup()) + '</mtext>';
+    }
+    if (name === 'mathrm' || name === 'operatorname') {
+      return textVariant(readRawGroup(), 'normal');
+    }
+    if (name === 'mathbf' || name === 'bm' || name === 'boldsymbol') {
+      return textVariant(readRawGroup(), 'bold');
+    }
+    if (name === 'mathit' || name === 'textit') {
+      return textVariant(readRawGroup(), 'italic');
+    }
+    if (name === 'left' || name === 'right') {
+      // \left( \right)：当普通括号处理
+      while (i < s.length && /\s/.test(s[i])) i += 1;
+      const ch = s[i];
+      if (ch === undefined) return '';
+      i += 1;
+      if ('()[]|./'.indexOf(ch) < 0) return '<mo></mo>';
+      return '<mo>' + esc(ch) + '</mo>';
+    }
+    if (name === '\\') return '';            // 行末换行：行内公式里当空白
+    if (has(TEX_GREEK, name)) return '<mi>' + TEX_GREEK[name] + '</mi>';
+    if (has(TEX_OPS, name)) return '<mo>' + TEX_OPS[name] + '</mo>';
+    if (has(TEX_ESCAPED, name)) return '<mo>' + esc(TEX_ESCAPED[name]) + '</mo>';
+    // 认不出的命令：原样显示，别吞、也别崩。
+    return '<mtext class="tex-math-raw">' + esc(cmd.raw) + '</mtext>';
+  }
+
+  /** \mathrm / \mathbf：单个字母用 mi，长的用 mtext。 */
+  function textVariant(raw, variant) {
+    const body = String(raw == null ? '' : raw);
+    if (body.length === 1 && /[a-zA-Z]/.test(body)) {
+      return '<mi mathvariant="' + variant + '">' + esc(body) + '</mi>';
+    }
+    return '<mtext mathvariant="' + variant + '">' + esc(body) + '</mtext>';
+  }
+
+  /** 一串原子；^ 与 _ 取前一个原子做底（两个都有就合成 msubsup）。 */
+  function readSeq(inGroup) {
+    const out = [];
+    let base = null;
+    let sub = null;
+    let sup = null;
+    const flush = () => {
+      if (base === null) return;
+      if (sub !== null && sup !== null) {
+        out.push('<msubsup>' + base + sub + sup + '</msubsup>');
+      } else if (sub !== null) {
+        out.push('<msub>' + base + sub + '</msub>');
+      } else if (sup !== null) {
+        out.push('<msup>' + base + sup + '</msup>');
+      } else {
+        out.push(base);
+      }
+      base = null;
+      sub = null;
+      sup = null;
+    };
+    while (i < s.length) {
+      const ch = s[i];
+      if (inGroup && ch === '}') { i += 1; break; }
+      if (ch === '^' || ch === '_') {
+        i += 1;
+        const script = readAtom();
+        if (base === null) base = '<mrow></mrow>';
+        if (ch === '^') sup = script;
+        else sub = script;
+        continue;
+      }
+      const atom = readAtom();
+      if (atom !== '') {
+        flush();
+        base = atom;
+      }
+    }
+    flush();
+    return out.join('');
+  }
+
+  return readSeq(false);
+}
+
 /** 行内 LaTeX 的最小子集：只做排版，不执行任何命令。 */
 function latexInline(text) {
-  let s = esc(text);
+  const raw = String(text == null ? '' : text);
+  // 数学先摘出来：转义之后再找 $…$ 就认不出里面的命令了。
+  const maths = [];
+  let s = raw.replace(/\$([^$]+)\$/g, (m, body) => {
+    maths.push(texMathToMathML(body, false));
+    return '\u0001' + maths.length + '\u0001';
+  });
+  s = esc(s);
   s = s.replace(/\\textbf\{([^{}]*)\}/g, '<strong>$1</strong>');
   s = s.replace(/\\emph\{([^{}]*)\}/g, '<em>$1</em>');
   s = s.replace(/\\textit\{([^{}]*)\}/g, '<em>$1</em>');
@@ -2158,15 +2398,27 @@ function latexInline(text) {
   s = s.replace(/\\ref\{([^{}]*)\}/g, '<span class="tex-ref">($1)</span>');
   s = s.replace(/\\fact\{([^{}]*)\}/g, '<span class="tex-fact">$1</span>');
   s = s.replace(/\\label\{[^{}]*\}/g, '');
-  s = s.replace(/\$([^$]+)\$/g, '<span class="tex-math">$1</span>');
   s = s.replace(/\\([%&_#{}])/g, '$1');
   s = s.replace(/~/g, ' ');
   s = s.replace(/\\\\/g, '<br>');
+  // 数学换回 MathML（放最后：里面的尖括号不该再被当成命令处理）。
+  s = s.replace(/\u0001(\d+)\u0001/g, (m, n) => maths[Number(n) - 1] || '');
   return s;
 }
 
+/** 块级公式：align 用 \\ 分行，每行各出一个 <math display="block">。 */
+function texMathBlockHtml(text) {
+  const rows = String(text == null ? '' : text).split(/\\\\/);
+  return rows
+    .map((row) => row.trim())
+    .filter((row) => row !== '')
+    .map((row) => texMathToMathML(row, true))
+    .join('');
+}
+
 function texBlockStart(line) {
-  return /^\\(section|subsection|subsubsection|begin\{(itemize|enumerate|table|figure|equation|align)\}|\[)/.test(line);
+  return /^\\(section|subsection|subsubsection|begin\{(itemize|enumerate|table|figure|equation|align)\}|\[)/.test(line)
+    || line.startsWith('$$');
 }
 
 /** 把一节 LaTeX 渲染成网页预览（安全：先转义，再只做白名单替换）。 */
@@ -2210,7 +2462,26 @@ function latexToHtml(source) {
       i += 1;
       while (i < lines.length && lines[i].trim() !== close) { body.push(lines[i]); i += 1; }
       i += 1;
-      out.push('<div class="tex-math-block">' + esc(body.join('\n').replace(/\\\\/g, '\n')) + '</div>');
+      out.push('<div class="tex-math-block">' + texMathBlockHtml(body.join(' ')) + '</div>');
+      continue;
+    }
+    if (line.startsWith('$$')) {
+      // $$…$$：同行写完，或者跨行到下一个以 $$ 结尾的行。
+      const body = [];
+      const rest = line.slice(2);
+      if (rest.length > 2 && rest.endsWith('$$')) {
+        body.push(rest.slice(0, -2));
+        i += 1;
+      } else {
+        if (rest.trim()) body.push(rest);
+        i += 1;
+        while (i < lines.length && !lines[i].trim().endsWith('$$')) { body.push(lines[i]); i += 1; }
+        if (i < lines.length) {
+          body.push(lines[i].trim().slice(0, -2));
+          i += 1;
+        }
+      }
+      out.push('<div class="tex-math-block">' + texMathBlockHtml(body.join(' ')) + '</div>');
       continue;
     }
     if (/^\\begin\{tabular\}/.test(line)) {
@@ -2244,8 +2515,7 @@ function latexToHtml(source) {
         i += 1;
       }
       i += 1;
-      out.push('<figure class="tex-figure"><div class="tex-figure-box">' +
-        (graphic ? esc(graphic) : '图') + '</div>' +
+      out.push('<figure class="tex-figure">' + texFigureBody(graphic) +
         (caption ? '<figcaption>' + latexInline(caption) + '</figcaption>' : '') + '</figure>');
       continue;
     }
@@ -2264,6 +2534,23 @@ function latexToHtml(source) {
   return out.join('\n');
 }
 
+/**
+ * figure 里的图：走 /api/asset 读项目里的图片（PDF 由服务端转成 PNG）。
+ *
+ * 读不出来（文件不在、路径越界、服务端没装 poppler）时显示文件名占位，
+ * 不留一个破图。
+ */
+function texFigureBody(graphic) {
+  const name = String(graphic == null ? '' : graphic).trim();
+  if (!name) return '<div class="tex-figure-box">图</div>';
+  const onerr = "this.outerHTML='<span class=&quot;tex-img-missing&quot;>'"
+    + "+(this.dataset.missing||'')+'</span>'";
+  return '<div class="tex-figure-box">'
+    + '<img class="tex-img" src="' + esc(assetUrl(name)) + '" alt="' + esc(name) + '"'
+    + ' data-missing="' + esc(name) + '" onerror="' + onerr + '">'
+    + '</div>';
+}
+
 /** 把当前节渲染进预览框。 */
 function renderWbPreviewHtml() {
   const box = $('#wb-preview-html');
@@ -2275,6 +2562,95 @@ function renderWbPreviewHtml() {
   }
   const text = $('#workbench-section-text')?.value || '';
   box.innerHTML = latexToHtml(text) || '<div class="line-empty">这一节没有内容。</div>';
+}
+
+// ------------------------------------- 源码高亮：pre 叠在 textarea 底下
+//
+// textarea 的文字是透明的（只留光标），底下那层 pre 显示带颜色的同一份文本。
+// 两层的字体、行高、内边距必须完全一致，否则光标会跟字错行。
+//
+// 高亮是自己写的，不引第三方：LaTeX 的高亮规则就那么几条，
+// 一条正则 + 一点优先级就够，犯不着为一屏高亮拉一个依赖进来。
+
+// 超过这个大小就不高亮了：每敲一个字都重画一遍大文件，输入会卡。
+const HIGHLIGHT_MAX_CHARS = 200 * 1024;
+
+/**
+ * 一段 LaTeX → 带 span 的 HTML。
+ *
+ * 先转义，再按优先级包 span：注释 > 环境 > 命令 > 转义符 > 数学 > 花括号 > 数字。
+ * 注释优先级最高（% 后面的都是注释），环境先于命令（\begin{…} 不是命令）。
+ */
+function highlightTex(text) {
+  const src = String(text == null ? '' : text);
+  const re = /(%[^\n]*)|(\\(?:begin|end)\{[^{}]*\})|(\\[a-zA-Z]+)|(\\[^a-zA-Z\s])|(\$[^$\n]*\$)|([{}])|(\d+(?:\.\d+)?)/g;
+  let out = '';
+  let last = 0;
+  let m;
+  while ((m = re.exec(src)) !== null) {
+    out += esc(src.slice(last, m.index));
+    const cls = m[1] ? 'tx-comment'
+      : m[2] ? 'tx-env'
+      : (m[3] || m[4]) ? 'tx-cmd'
+      : m[5] ? 'tx-math'
+      : m[6] ? 'tx-brace'
+      : 'tx-num';
+    out += '<span class="' + cls + '">' + esc(m[0]) + '</span>';
+    last = m.index + m[0].length;
+  }
+  out += esc(src.slice(last));
+  return out;
+}
+
+/** 高亮层跟着源码走：输入、切节、插入片段之后都调它。 */
+function updateHighlight() {
+  const ta = $('#workbench-section-text');
+  const pre = $('#wb-highlight');
+  if (!ta || !pre) return;
+  const code = pre.querySelector('code');
+  const note = $('#wb-highlight-note');
+  const text = ta.value || '';
+  if (text.length > HIGHLIGHT_MAX_CHARS) {
+    // 太大的文件不高亮：说清楚为什么关了，别让人以为是坏了。
+    if (code) code.textContent = '';
+    if (note) {
+      note.textContent = '这一节超过 200 KB，已关闭语法高亮（输入更流畅）。';
+      note.hidden = false;
+    }
+    return;
+  }
+  if (note) {
+    note.textContent = '';
+    note.hidden = true;
+  }
+  // 末尾补一个换行：textarea 永远多出最后一行，高亮层也得有，两层才等高。
+  if (code) code.innerHTML = highlightTex(text) + '\n';
+  syncHighlightMetrics();
+  syncHighlightScroll();
+}
+
+/** 滚动同步：输入框滚到哪，高亮层跟到哪（不然两层的字会错行）。 */
+function syncHighlightScroll() {
+  const ta = $('#workbench-section-text');
+  const pre = $('#wb-highlight');
+  if (!ta || !pre) return;
+  pre.scrollTop = ta.scrollTop;
+  pre.scrollLeft = ta.scrollLeft;
+}
+
+/** 输入框有滚动条时，把它占掉的宽度补回高亮层：两层的字才对得上。 */
+function syncHighlightMetrics() {
+  const ta = $('#workbench-section-text');
+  const pre = $('#wb-highlight');
+  if (!ta || !pre) return;
+  const style = window.getComputedStyle(ta);
+  const border = (parseFloat(style.borderLeftWidth) || 0)
+    + (parseFloat(style.borderRightWidth) || 0);
+  const bar = Math.max(0, (ta.offsetWidth - ta.clientWidth) - border);
+  if (pre.dataset.basePad === undefined) {
+    pre.dataset.basePad = String(parseFloat(style.paddingRight) || 0);
+  }
+  pre.style.paddingRight = (parseFloat(pre.dataset.basePad) + bar) + 'px';
 }
 
 /** 问题的位置能不能跳：正文:N 跳当前节；<节文件>:<行> 跳那一节那一行。 */
@@ -2367,6 +2743,7 @@ function insertSnippet(template, spec) {
   ta.focus();
   ta.setSelectionRange(at, start + caret.end);
   ta.dispatchEvent(new Event('input', { bubbles: true }));
+  updateHighlight();
 }
 
 /** 右栏：问题与 AI 聊天互斥，同时只显示一个。 */
@@ -3065,6 +3442,17 @@ async function runWorkbenchAudit() {
 function wire() {
   for (const btn of $$('.nav-item')) btn.addEventListener('click', () => switchTab(btn.dataset.tab));
 
+  // 源码编辑器：输入时重画高亮层，滚动时两层一起动。
+  const sectionText = $('#workbench-section-text');
+  if (sectionText) {
+    sectionText.addEventListener('input', () => updateHighlight());
+    sectionText.addEventListener('scroll', () => syncHighlightScroll());
+  }
+  window.addEventListener('resize', () => {
+    syncHighlightMetrics();
+    syncHighlightScroll();
+  });
+
   // 引用页：按状态过滤（全部 / 缺标识 / 未引用）
   for (const btn of $$('.cite-filter')) {
     btn.addEventListener('click', () => {
@@ -3195,6 +3583,7 @@ function wire() {
     const project = state.workbenchProject;
     const row = project && project.sections.find((s) => s.file === $('#workbench-section-select').value);
     $('#workbench-section-text').value = row ? row.text : '';
+    updateHighlight();
     state.currentSection = $('#workbench-section-select').value || '';
     renderWorkbenchSections();
     const label = $('#wb-current-section');

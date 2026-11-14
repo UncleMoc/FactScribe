@@ -148,7 +148,12 @@
                 <div id="wb-source-pane" class="wb-pane">
                   <div id="workbench-editor" hidden>
                     <label class="editor-label" for="workbench-section-text">当前节（写给工作台项目）</label>
-                    <textarea id="workbench-section-text" class="editor" spellcheck="false" aria-label="工作台章节内容"></textarea>
+                    <span id="wb-highlight-note" class="muted-note" hidden></span>
+                    <!-- 高亮层叠在输入框底下：textarea 文字透明，只留光标。 -->
+                    <div id="wb-editor-wrap" class="wb-editor-wrap">
+                      <pre id="wb-highlight" class="wb-highlight" aria-hidden="true"><code></code></pre>
+                      <textarea id="workbench-section-text" class="editor wb-editor-input" spellcheck="false" aria-label="工作台章节内容"></textarea>
+                    </div>
                   </div>
                   <div id="wb-section-empty" class="line-empty">还没载入工作台项目。先在上面载入或连接一个论文项目。</div>
                 </div>
