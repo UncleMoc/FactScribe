@@ -893,3 +893,29 @@ code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monos
 @media (max-width: 720px) {
   .project-layout { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* 左侧项目树：项目名是根，章节缩进一级，导航在分隔线下面 */
+.tree-root {
+  width: 100%; display: flex; align-items: center; gap: 6px;
+  padding: 8px 6px; border: none; border-radius: 8px; background: none;
+  color: var(--mcode-text); font-family: inherit; font-size: 15px;
+  font-weight: 600; text-align: left; cursor: pointer;
+}
+.tree-root:hover { background: var(--mcode-surface-muted); }
+.tree-root:focus-visible { outline: 2px solid var(--mcode-accent); outline-offset: 1px; }
+.tree-caret { flex: none; color: var(--mcode-text-muted); font-size: 12px; }
+.tree-root-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tree-empty {
+  margin: 2px 6px 10px; font-size: 12px; line-height: 18px;
+  color: var(--mcode-text-muted);
+}
+.tree-children {
+  margin: 2px 0 8px 14px; padding-left: 8px;
+  border-left: 1px solid var(--mcode-border);
+}
+.tree-children-head {
+  display: flex; align-items: center; justify-content: flex-end;
+  gap: 8px; padding: 0 4px 4px;
+}
+.sidebar-divider { height: 1px; margin: 8px 4px; background: var(--mcode-border); }
+.sidebar-nav { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }

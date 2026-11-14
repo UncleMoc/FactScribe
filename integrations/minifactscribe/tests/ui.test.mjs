@@ -648,10 +648,13 @@ test('侧栏项目名跟着工作台项目走：没有项目就写那句默认�
     JS.indexOf('function renderWorkbench()'));
   assert.ok(block.length > 0, '应有侧栏项目名渲染函数');
   assert.match(block, /workbenchProject/, '名字来自工作台项目');
-  assert.match(block, /sidebar\.noProject/, '没有项目要说清没选（文案走字典）');
+  assert.match(HTML, /data-i18n="sidebar\.noProject"/, '没项目时那句提示挂在空态元素上');
   assert.match(JS, /'sidebar\.noProject':\s*'未选择项目，点击项目管理选择或新建项目'/,
     '没项目时那句提示要留在字典里');
   assert.match(block, /sidebar-project-name/, '要写到侧栏那个名字位');
+  assert.match(block, /sidebar-project-empty/, '没项目时显示那句默认提示');
+  assert.match(block, /sidebar-project-root/, '有项目时显示树根');
+  assert.match(block, /sectionsCollapsed/, '根节点可折叠章节');
 });
 
 test('侧栏顶部：按钮是「项目管理」，下面一行是当前项目名', () => {

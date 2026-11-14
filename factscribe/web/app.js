@@ -706,6 +706,7 @@ function switchTab(tab, opts = {}) {
     panel.hidden = !on;
   }
   if (tab === 'project/new') openNewProjectForm();
+  renderWorkbenchSections();
   renderTab();
   updateTitle();
   if (!opts.fromHash) writeHash(tab, opts.replace);
@@ -1570,10 +1571,22 @@ function renderSidebarProject() {
     const row = state.projects.find((p) => p.path === state.projectPath);
     name = String(row?.name || '').trim();
   }
-  el.textContent = name || t('sidebar.noProject');
+  const has = Boolean(name);
+  const root = $('#sidebar-project-root');
+  const empty = $('#sidebar-project-empty');
+  const sections = $('#sidebar-sections');
+  const caret = $('#sidebar-project-caret');
+  if (root) root.hidden = !has;
+  if (empty) empty.hidden = has;
+  if (sections) sections.hidden = !has || Boolean(state.sectionsCollapsed);
+  if (caret) caret.textContent = state.sectionsCollapsed ? '▸' : '▾';
+  if (has) {
+    el.textContent = name;
+    root.title = name + '（点击展开/收起章节）';
+  }
   const btn = $('#btn-sidebar-project');
   if (btn) {
-    btn.title = name
+    btn.title = has
       ? '当前项目：' + name + '（点它去项目页换项目）'
       : '还没选论文项目（点它去项目页选一个或新建一个）';
   }
@@ -1901,7 +1914,8 @@ function renderWorkbenchSections() {
     return;
   }
   list.innerHTML = sections.map((s) => {
-    const active = s.file === current;
+    // 只有停在工作台页签时，当前节才高亮；切到事实账/引用时不能还亮着。
+    const active = s.file === current && state.tab === 'workbench';
     const c = sectionIssueCounts(s.file);
     const badge = !state.workbenchAudit
       ? '<span class="wb-badge wb-badge-none" title="还没审计，这一节的问题未知">·</span>'
@@ -3010,6 +3024,10 @@ function wire() {
 
   // 侧栏顶部：项目按钮进项目页（导航里没有「项目」项了）
   $('#btn-sidebar-project').addEventListener('click', () => switchTab('project'));
+  $('#sidebar-project-root').addEventListener('click', () => {
+    state.sectionsCollapsed = !state.sectionsCollapsed;
+    renderSidebarProject();
+  });
 
   // 工作台：源码 / 预览
   $('#btn-wb-mode-source').addEventListener('click', () => {

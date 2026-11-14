@@ -33,24 +33,27 @@
             title="项目管理：选一个论文项目或新建一个">
             <span class="project-switch-label" data-i18n="btn.projectManage">项目管理</span>
           </button>
-          <p id="sidebar-project-name" class="project-switch-name"
+          <button id="sidebar-project-root" class="tree-root" type="button" hidden>
+            <span id="sidebar-project-caret" class="tree-caret" aria-hidden="true">▾</span>
+            <span id="sidebar-project-name" class="tree-root-name"></span>
+          </button>
+          <p id="sidebar-project-empty" class="tree-empty"
             data-i18n="sidebar.noProject">未选择项目，点击项目管理选择或新建项目</p>
-        </div>
-
-        <div class="sidebar-block" aria-label="章节目录">
-          <div class="sidebar-block-head">
-            <h2 class="sidebar-block-title" data-i18n="nav.sections">章节目录</h2>
-            <span id="wb-section-count" class="muted-note"></span>
-            <button id="btn-wb-section-add" class="sidebar-block-add" type="button"
-              title="新建章节" aria-label="新建章节" data-i18n-title="wb.sectionAdd">＋</button>
+          <div id="sidebar-sections" class="tree-children" hidden>
+            <div class="tree-children-head">
+              <button id="btn-wb-section-add" class="sidebar-block-add" type="button"
+                title="新建章节" aria-label="新建章节" data-i18n-title="wb.sectionAdd">＋</button>
+              <span id="wb-section-count" class="muted-note"></span>
+            </div>
+            <div id="wb-section-list" class="wb-section-list"></div>
+            <!-- 隐藏的下拉：现有逻辑与测试都认它，目录按钮改动时同步它 -->
+            <label class="field" hidden>
+              <span data-i18n="field.pickSection">选择一节</span>
+              <select id="workbench-section-select"></select>
+            </label>
           </div>
-          <div id="wb-section-list" class="wb-section-list"></div>
-          <!-- 隐藏的下拉：现有逻辑与测试都认它，目录按钮改动时同步它 -->
-          <label class="field" hidden>
-            <span data-i18n="field.pickSection">选择一节</span>
-            <select id="workbench-section-select"></select>
-          </label>
         </div>
+        <div class="sidebar-divider" aria-hidden="true"></div>
 
         <div class="sidebar-nav">
           <button class="nav-item" data-tab="ai" role="tab" aria-selected="false" aria-controls="panel-ai" data-i18n="page.ai">AI 起草</button>
