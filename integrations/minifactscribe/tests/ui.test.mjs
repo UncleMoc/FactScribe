@@ -825,9 +825,11 @@ test('引导条的五个勾由状态推导：不许假勾', () => {
   assert.ok(block.length > 0, '要有 guideProgress 这个推导函数');
   assert.match(block, /state\.currentSection/, '第 ① 步看当前选中的节');
   assert.match(block, /findings\.length > 0/, '第 ② 步看有没有红/黄');
-  assert.match(block, /state\.guide\.edited/, '第 ③ 步看有没有改过');
-  assert.match(block, /state\.guide\.auditedAfterEdit/, '第 ④ 步看改后有没有重跑审计');
-  assert.match(block, /audit\?\.exit\) === 0/, '第 ⑤ 步看退出码是不是 0');
+  assert.match(block, /reports\.some/, '第 ③ 步看报告是否已签收');
+  assert.match(block, /signed/, '第 ③ 步要有签收字段');
+  assert.match(block, /facts\.some/, '第 ④ 步看账里有没有报告导入的事实');
+  assert.match(block, /f\.report/, '第 ④ 步要有 report 字段');
+  assert.match(block, /severity !== 'red'/, '第 ⑤ 步看红牌是否清零');
   // 勾由状态算出来：渲染里不许写死一个「已完成」。
   const render = JS.slice(JS.indexOf('function renderGuide'), JS.indexOf('async function openGuideSample'));
   assert.match(render, /guideProgress\(\)/, '渲染要问 guideProgress 要进度');
@@ -842,7 +844,7 @@ test('引导状态记在 localStorage 的 factscribe.guide 里（值＝项目路
 
 test('引导文案进字典：中英各一套', () => {
   for (const key of ['guide.title', 'guide.desc', 'guide.bar', 'guide.step1', 'guide.step2',
-    'guide.step3', 'guide.step4', 'guide.step5', 'guide.hint', 'guide.readyMini',
+    'guide.step3', 'guide.step4', 'guide.step5', 'guide.hint1', 'guide.hint5', 'guide.readyMini',
     'btn.guideOpen', 'btn.guideOpenExists', 'btn.guideReset', 'btn.guideClose']) {
     assert.match(JS, new RegExp("'" + key + "'"), '字典里要有 ' + key);
   }
@@ -948,4 +950,11 @@ test('预览会定位到本节页：走 wb(/section-page)，不是只看整本',
   assert.match(JS, /locateWbSectionPage/, '应有定位函数');
   assert.match(JS, /wb\('\/section-page\?file='/, '页码走工作台接口');
   assert.match(JS, /#page=/, 'embed 要带页码片段');
+});
+
+
+test('MiniApp 可在浏览器打开同一个服务：按钮只在宿主里出现', () => {
+  assert.match(HTML, /id="btn-wb-open-browser"/, '应有在浏览器打开按钮');
+  assert.match(JS, /wb\('\/browser'\)/, '走工作台 browser 接口');
+  assert.match(JS, /openBrowser\.hidden = !MODE\.mini/, '网页模式隐藏');
 });

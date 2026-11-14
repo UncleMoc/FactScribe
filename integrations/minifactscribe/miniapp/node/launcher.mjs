@@ -15,7 +15,8 @@ export const DEFAULT_PYTHON = 'python3';
 
 /** 固定参数；顺序即契约。 */
 export function serveArgs({ project, allowWrite = false, allowBuild = false }) {
-  const args = ['serve', project, '--port', '0', '--json'];
+  // --ui：同一端口也提供页面，MiniApp 才能「在浏览器打开」同一个服务
+  const args = ['serve', project, '--port', '0', '--json', '--ui'];
   if (allowWrite) args.push('--allow-write');
   if (allowBuild) args.push('--allow-build');
   return args;
@@ -278,4 +279,21 @@ export function stopServe(child, { graceMs = STOP_GRACE_MS } = {}) {
       finish(false);
     }
   });
+}
+
+
+/** 打开系统默认浏览器：只接受本服务自己的地址，命令固定、不过 shell。 */
+export function browserCommand(url, platform = process.platform) {
+  if (platform === 'darwin') return { cmd: 'open', args: [url] };
+  if (platform === 'win32') {
+    return { cmd: 'rundll32', args: ['url.dll,FileProtocolHandler', url] };
+  }
+  return { cmd: 'xdg-open', args: [url] };
+}
+
+export function openInBrowser(url) {
+  const { cmd, args } = browserCommand(url);
+  const child = spawn(cmd, args, { stdio: 'ignore', shell: false, detached: true });
+  child.unref();
+  return true;
 }

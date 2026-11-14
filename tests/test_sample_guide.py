@@ -10,6 +10,8 @@
 """
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import os
 import shutil
@@ -155,6 +157,26 @@ class SampleGuideTest(unittest.TestCase):
         tokens = " ".join(str(f.get("token") or "") for f in red)
         self.assertIn("47.3", tokens)
         self.assertIn("ghost2024", tokens)
+
+    def test_sample_report_checks_and_imports(self):
+        """示例自带一份可签的报告；单项目工作区（无 paper/ 子目录）也能导入。"""
+        status, _ = self._post({"reset": True}, token=TOKEN)
+        self.assertEqual(status, 200)
+        from factscribe.report import check_report, lock_report, sign_report
+
+        rel = "reports/guide.report.toml"
+        checked = check_report(self.target, rel)
+        self.assertTrue(checked["ok"], checked["errors"])
+        lock_report(self.target, rel)
+        sign_report(self.target, rel, "tester")
+
+        from factscribe.cli import main
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(out):
+            code = main(["fact", "import", str(self.target),
+                         "--report", rel, "--json"])
+        self.assertEqual(0, code, out.getvalue())
+        self.assertTrue((self.target / "facts" / "guide.guide-1.toml").is_file())
 
     def test_endpoint_needs_no_project(self):
         """没选论文项目也能装示例（项目管理模式下同样可用）。"""

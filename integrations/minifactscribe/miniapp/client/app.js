@@ -193,10 +193,14 @@ const I18N = {
     'guide.bar': '新手引导',
     'guide.step1': '选一节',
     'guide.step2': '看红牌',
-    'guide.step3': '改一处',
-    'guide.step4': '重跑审计',
-    'guide.step5': '变绿',
-    'guide.hint': '把正文里的 47.3 改成账里有的数，或在事实账里补一条',
+    'guide.step3': '报告签收',
+    'guide.step4': '导入事实',
+    'guide.step5': '红牌清零',
+    'guide.hint1': '左边点任意一节开始。',
+    'guide.hint2': '看右边「要处理的问题」：47.3 账里没有、ghost2024 不存在。',
+    'guide.hint3': '去「实验报告」：检查 → 封存 → 签收（签收人写你的名字）。',
+    'guide.hint4': '签收后在报告页点「导入」，账里会多出 guide.guide-1.p95。',
+    'guide.hint5': '把正文 47.3 改成 12.5 并写成 12.5\\fact{guide.guide-1.p95}，删掉 ghost2024，再重跑审计；红牌变 0 即完成（黄牌仍要人判断）。',
     'guide.readyMini': '示例已准备好：点「启动并连接」，然后回工作台看红牌。',
     'guide.opened': '已打开示例论文',
     'guide.resetDone': '示例已重置',
@@ -312,10 +316,14 @@ const I18N = {
     'guide.bar': 'Getting started',
     'guide.step1': 'Pick a section',
     'guide.step2': 'See the red flags',
-    'guide.step3': 'Change one thing',
-    'guide.step4': 'Re-run the audit',
-    'guide.step5': 'Go green',
-    'guide.hint': 'Change 47.3 in the text to a number the ledger knows, or add a fact for it',
+    'guide.step3': 'Sign the report',
+    'guide.step4': 'Import facts',
+    'guide.step5': 'No red flags',
+    'guide.hint1': 'Pick any section on the left to start.',
+    'guide.hint2': 'Look at the issues on the right: 47.3 is not in the ledger and ghost2024 does not exist.',
+    'guide.hint3': 'Open Experiment reports: check -> lock -> sign (type your name).',
+    'guide.hint4': 'After signing, click Import; a new fact guide.guide-1.p95 appears.',
+    'guide.hint5': 'Change 47.3 to 12.5 and bind it as 12.5\\fact{guide.guide-1.p95}, remove ghost2024, then re-run the audit; zero red flags finishes the guide (yellows still need a human).',
     'guide.readyMini': 'Sample is ready: click “Start and connect”, then open the workbench.',
     'guide.opened': 'Sample paper opened',
     'guide.resetDone': 'Sample reset',
@@ -730,6 +738,9 @@ function applyMode() {
       ? 'FactScribe · 数字与引用的机械闸门'
       : '本地工作台 · 真实论文项目';
   }
+  // 「在浏览器打开」只有 MiniApp 需要：网页本来就在浏览器里。
+  const openBrowser = $('#btn-wb-open-browser');
+  if (openBrowser) openBrowser.hidden = !MODE.mini;
   // 只有「AI 起草」是宿主专属页签：网页里没有宿主 agent。
   const hostTabs = ['ai'];
   for (const tab of hostTabs) {
@@ -1446,12 +1457,14 @@ function guideActive() {
 function guideProgress() {
   const audit = state.workbenchAudit;
   const findings = Array.isArray(audit?.findings) ? audit.findings : [];
+  const reports = state.wbReports?.reports || [];
+  const facts = state.workbenchProject?.facts || [];
   return [
-    Boolean(state.currentSection),           // ① 选过任意一节
-    findings.length > 0,                    // ② 审计结果里至少有一条红/黄
-    Boolean(state.guide.edited),             // ③ 保存过正文或追加过事实
-    Boolean(state.guide.auditedAfterEdit),   // ④ 之后重跑过审计
-    Number(audit?.exit) === 0,               // ⑤ 审计退出码 0
+    Boolean(state.currentSection),            // ① 选过任意一节
+    findings.length > 0,                     // ② 看到红黄
+    reports.some((r) => r.signed),            // ③ 报告已签收
+    facts.some((f) => String(f.report || '')),// ④ 报告事实已导入
+    Boolean(audit) && findings.every((f) => f.severity !== 'red'),  // ⑤ 红牌清零
   ];
 }
 
@@ -1477,9 +1490,9 @@ function renderGuide() {
   }
   const hint = $('#guide-hint');
   if (hint) {
-    const show = !done[2];
-    hint.hidden = !show;
-    hint.textContent = show ? t('guide.hint') : '';
+    const missing = done.findIndex((ok) => !ok);
+    hint.hidden = missing < 0;
+    hint.textContent = missing < 0 ? '' : t('guide.hint' + (missing + 1));
   }
 }
 
@@ -2443,6 +2456,9 @@ async function reportAction(action) {
   if (action === 'import') {
     toast(result.written ? '已写进事实账：' + (result.facts_file || '')
       : (result.unchanged ? '账上已是最新，没改动' : '演练：没有写盘'));
+    await loadWorkbenchProject();
+    await runWorkbenchAudit();
+    renderGuide();
     return;
   }
   toast(tf('state.actionDone', { what: tz(REPORT_ACTION_LABEL[action] || action) }));
@@ -2733,6 +2749,11 @@ function wire() {
   });
   $('#btn-workbench-disconnect').addEventListener('click', () => {
     disconnectWorkbench().catch((e) => toast('断开失败：' + e.message));
+  });
+  $('#btn-wb-open-browser').addEventListener('click', () => {
+    api(wb('/browser'), { method: 'POST' })
+      .then(() => toast('已在本机浏览器打开（同一个服务）'))
+      .catch((e) => toast('打开浏览器失败：' + e.message));
   });
   $('#btn-workbench-audit').addEventListener('click', () => {
     runWorkbenchAudit().catch((e) => { $('#workbench-status').textContent = '审计失败：' + e.message; toast('审计失败：' + e.message); });

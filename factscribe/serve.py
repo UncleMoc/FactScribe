@@ -79,7 +79,19 @@ class _Handler(BaseHTTPRequestHandler):
         err.update(extra)
         self._send(code, {"ok": False, "error": err})
 
+    def _origin_ok(self) -> bool:
+        """带 Origin 的请求必须是本监听地址；没有 Origin（命令行/同源导航）放行。"""
+        origin = self.headers.get("Origin", "")
+        if not origin:
+            return True
+        url = urlparse(origin)
+        if url.scheme != "http" or url.hostname not in LOOPBACK_HOSTS:
+            return False
+        return (url.port or 80) == self.server.server_address[1]
+
     def _authorized(self) -> bool:
+        if not self.server.require_token:  # type: ignore[attr-defined]
+            return True
         token = self.server.token  # type: ignore[attr-defined]
         supplied = self.headers.get("X-FactScribe-Token", "")
         auth = self.headers.get("Authorization", "")
@@ -126,6 +138,10 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802 - stdlib signature
         path = urlparse(self.path).path
+        if not self._origin_ok():
+            self._error(403, "CROSS_ORIGIN",
+                        "跨源请求不接：只允许本监听地址（同源）")
+            return
         if self.server.serve_ui and path in _STATIC:  # type: ignore[attr-defined]
             name, content_type = _STATIC[path]
             try:
@@ -199,6 +215,10 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802 - stdlib signature
         path = urlparse(self.path).path
+        if not self._origin_ok():
+            self._error(403, "CROSS_ORIGIN",
+                        "跨源请求不接：只允许本监听地址（同源）")
+            return
         if not self._authorized():
             self._error(401, "UNAUTHORIZED",
                         "需要 Bearer token（Authorization 或 X-FactScribe-Token）")
@@ -514,6 +534,10 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_DELETE(self) -> None:  # noqa: N802 - stdlib signature
         path = urlparse(self.path).path
+        if not self._origin_ok():
+            self._error(403, "CROSS_ORIGIN",
+                        "跨源请求不接：只允许本监听地址（同源）")
+            return
         if not self._authorized():
             self._error(401, "UNAUTHORIZED",
                         "需要 Bearer token（Authorization 或 X-FactScribe-Token）")
@@ -561,19 +585,20 @@ class WorkbenchServer(ThreadingHTTPServer):
 
     def __init__(self, address, project: Path | None, token: str,
                  allow_write: bool = False, serve_ui: bool = False,
-                 allow_build: bool = False):
+                 allow_build: bool = False, require_token: bool = True):
         self.project = project
         self.token = token
         self.allow_write = allow_write
         self.serve_ui = serve_ui
         self.allow_build = allow_build
+        self.require_token = bool(require_token)
         super().__init__(address, _Handler)
 
 
 def create_server(project: Path | str | None = None, *, host: str = "127.0.0.1",
                   port: int = 0, token: str | None = None,
                   allow_write: bool = False, serve_ui: bool = False,
-                  allow_build: bool = False
+                  allow_build: bool = False, require_token: bool = True
                   ) -> tuple[WorkbenchServer, str]:
     """建服务但不启动；返回 (server, token)。项目不合法时抛 ConfigError。
 
@@ -590,8 +615,9 @@ def create_server(project: Path | str | None = None, *, host: str = "127.0.0.1",
             raise ConfigError("项目目录不存在：%s" % root)
         root = root.resolve()
         load_config(root)  # 提前校验；坏配置在启动时就 exit 2
-    actual_token = token or secrets.token_urlsafe(24)
+    actual_token = (token or secrets.token_urlsafe(24)) if require_token else ""
     server = WorkbenchServer((host, int(port)), root, actual_token,
                              allow_write=allow_write, serve_ui=serve_ui,
-                             allow_build=allow_build)
+                             allow_build=allow_build,
+                             require_token=require_token)
     return server, actual_token
