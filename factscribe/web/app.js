@@ -783,6 +783,9 @@ function applyMode() {
       ? 'FactScribe · 数字与引用的机械闸门'
       : '本地工作台 · 真实论文项目';
   }
+  // 网页里服务已经起好，MiniApp 的「启动并连接」整块不需要。
+  const wbProject = $('#wb-project');
+  if (wbProject) wbProject.hidden = !MODE.mini;
   // 「在浏览器打开」只有 MiniApp 需要：网页本来就在浏览器里。
   const openBrowser = $('#btn-wb-open-browser');
   if (openBrowser) openBrowser.hidden = !MODE.mini;
