@@ -42,6 +42,7 @@ export function normalizeRegistry(raw) {
     projects.push({
       path,
       name: String(item?.name ?? ''),
+      description: String(item?.description ?? ''),
       lastOpenedAt: String(item?.lastOpenedAt ?? ''),
     });
   }
@@ -160,7 +161,14 @@ export function upsertProject(registry, { path, name, at }) {
   const reg = normalizeRegistry(registry);
   const when = at || new Date().toISOString();
   const rest = reg.projects.filter((p) => p.path !== path);
-  const entry = { path, name: name || readProjectName(path), lastOpenedAt: when };
+  const old = reg.projects.find((p) => p.path === path);
+  const entry = {
+    path,
+    name: name || readProjectName(path),
+    // 已经在册的项目：简介留着（Python 侧写进来的那一行）。
+    description: old?.description ?? '',
+    lastOpenedAt: when,
+  };
   return {
     ...reg,
     projects: [entry, ...rest].slice(0, MAX_PROJECTS),

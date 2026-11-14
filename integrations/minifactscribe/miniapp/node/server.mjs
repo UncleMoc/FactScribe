@@ -485,6 +485,14 @@ export async function start(context) {
             sendJson(response, upstream.status, upstream.data);
             return;
           }
+          if (request.method === 'POST' && path === '/api/workbench/projects/update') {
+            // 改项目名与简介：写登记册 + paperkit.toml，同样只有 Python 会写盘。
+            const body = await readBody(request);
+            const upstream = await workbenchProxy(workbench.url, workbench.token,
+              '/api/projects/update', 'POST', body);
+            sendJson(response, upstream.status, upstream.data);
+            return;
+          }
           if (request.method === 'POST' && path === '/api/workbench/facts') {
             const body = await readBody(request);
             sendJson(response, 200,

@@ -67,6 +67,7 @@ def normalize_registry(raw: object) -> dict:
         seen.add(path)
         projects.append({"path": path,
                          "name": str(row.get("name") or ""),
+                         "description": str(row.get("description") or ""),
                          "lastOpenedAt": str(row.get("lastOpenedAt") or "")})
     return {"version": REGISTRY_VERSION,
             "projects": projects,
@@ -142,7 +143,11 @@ def upsert_project(registry: dict, path: str | os.PathLike[str],
     reg = normalize_registry(registry)
     root = str(Path(path).resolve())
     when = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    entry = {"path": root, "name": name or project_name(root), "lastOpenedAt": when}
+    # 已经在册的项目：简介留着（登记册里的 description 是项目自己的那一行）。
+    old = next((p for p in reg["projects"] if p["path"] == root), None)
+    entry = {"path": root, "name": name or project_name(root),
+             "description": (old or {}).get("description", ""),
+             "lastOpenedAt": when}
     rest = [p for p in reg["projects"] if p["path"] != root]
     reg["projects"] = ([entry] + rest)[:MAX_PROJECTS]
     reg["lastPath"] = root
@@ -296,4 +301,104 @@ def create_project(*, title: str, parent: str, slug: str,
         "created": True,
         "files": list(created.get("files") or []),
     }
+
+
+# ------------------------------------------------------------ 改项目名与简介
+
+def _top_level_keys(text: str) -> list:
+    """顶层键（第一张表之前的那段）里的 `键 = 值`。"""
+    head = []
+    for line in text.splitlines():
+        if line.strip().startswith("["):
+            break
+        match = re.match(r"^\s*([A-Za-z0-9_-]+)\s*=", line)
+        if match:
+            head.append(match.group(1))
+    return head
+
+
+def _has_project_table(text: str) -> bool:
+    return any(line.strip() == "[project]" for line in text.splitlines())
+
+
+def _rewrite_flat_keys(path: Path, values: dict) -> None:
+    """改写扁平 schema（v3 形态 A）的顶层键：只替换/追加给定的键。
+
+    只动第一张表之前的那些行；表里的内容一个字都不改。
+    """
+    if not values:
+        return
+    lines = path.read_text(encoding="utf-8").splitlines()
+    end = len(lines)
+    for index, line in enumerate(lines):
+        if line.strip().startswith("["):
+            end = index
+            break
+    pending = dict(values)
+    head = []
+    for line in lines[:end]:
+        match = re.match(r"^\s*([A-Za-z0-9_-]+)\s*=", line)
+        key = match.group(1) if match else ""
+        if key in pending:
+            head.append("%s = %s" % (key, pending.pop(key)))
+        else:
+            head.append(line)
+    for key, value in pending.items():
+        head.append("%s = %s" % (key, value))
+    path.write_text("\n".join(head + lines[end:]).rstrip("\n") + "\n",
+                    encoding="utf-8")
+
+
+def update_project(registry: dict, path: str, name: str = "",
+                   description: str = "") -> dict:
+    """改一个**已在登记册里**的项目的名字与简介。
+
+    两处一起改：登记册的 `name`/`description`，以及项目自己的
+    `paperkit.toml`（`title` 与 `description`；其它键原样保留）。
+    路径不在册子里就拒绝——不然就变成「凭空造一个项目」。
+    """
+    reg = registry if isinstance(registry, dict) else {}
+    rows = reg.get("projects")
+    rows = rows if isinstance(rows, list) else []
+    raw = str(path or "").strip()
+    if not raw:
+        raise ProjectCreateError("先填论文项目文件夹", code="PROJECT_INVALID")
+    candidates = {raw}
+    try:
+        candidates.add(str(Path(raw).expanduser().resolve()))
+    except OSError:
+        pass
+    entry = next((p for p in rows
+                  if isinstance(p, dict)
+                  and str(p.get("path") or "") in candidates), None)
+    if entry is None:
+        raise ProjectCreateError(
+            "这个项目不在登记册里：%s（先在项目页加入它）" % raw,
+            code="PROJECT_NOT_REGISTERED")
+    new_name = str(name or "").strip() or entry.get("name", "")
+    new_desc = str(description or "").strip()
+    config_file = Path(entry["path"]) / CONFIG_NAME
+    if config_file.is_file():
+        text = config_file.read_text(encoding="utf-8")
+        values = {"description": _toml_value(new_desc)}
+        if _has_project_table(text):
+            # v1 与 v3 形态 B/C：名字在 [project].title。
+            values["title"] = _toml_value(new_name)
+            _rewrite_project_table(config_file, values)
+            # v3 里顶层 name/title 优先于表里的：顶层有就一起改。
+            top = _top_level_keys(text)
+            flat = {}
+            if "name" in top:
+                flat["name"] = _toml_value(new_name)
+            elif "title" in top:
+                flat["title"] = _toml_value(new_name)
+            _rewrite_flat_keys(config_file, flat)
+        else:
+            # 扁平 schema（v3 形态 A）：名字写在顶层。
+            key = "name" if "name" in _top_level_keys(text) else "title"
+            values[key] = _toml_value(new_name)
+            _rewrite_flat_keys(config_file, values)
+    entry["name"] = new_name
+    entry["description"] = new_desc
+    return {"path": entry["path"], "name": new_name, "description": new_desc}
 

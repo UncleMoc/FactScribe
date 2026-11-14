@@ -47,8 +47,12 @@ const state = {
   workbenchProject: null,
   projects: [],
   projectPath: '',
-  // 项目页有两级：'list'（列表）与 'new'（新建表单）。地址栏是 #/project 与 #/project/new。
+  // 项目页有两级：'list'（列表）、'new'（新建表单）、'add'（加入已有文件夹）。
+  // 地址栏是 #/project、#/project/new、#/project/add。
   projectView: 'list',
+  // 手风琴：同一时刻只展开一条（存路径）。projectEdit = 正在编辑的那一条。
+  projectOpen: '',
+  projectEdit: '',
   // 新建项目页顶部的错误（失败时留在表单里，不跳走）。
   npError: '',
   projectPython: '',
@@ -187,7 +191,8 @@ const I18N = {
     'ph.signer': '谁签的（签收必填，工具不替你猜）',
     'token.paste': '粘贴 token',
     'token.need': '需要 token',
-    'sidebar.noProject': '未选择',
+    'sidebar.noProject': '未选择项目，点击项目管理选择或新建项目',
+    'btn.projectManage': '项目管理',
     'guide.title': '新手引导',
     'guide.desc': '用一份示例论文走一遍：看问题 → 改一个数 → 变绿。不会动你的论文。',
     'guide.bar': '新手引导',
@@ -204,14 +209,31 @@ const I18N = {
     'guide.readyMini': '示例已准备好：点「启动并连接」，然后回工作台看红牌。',
     'guide.opened': '已打开示例论文',
     'guide.resetDone': '示例已重置',
-    'btn.guideOpen': '打开示例论文',
-    'btn.guideOpenExists': '打开示例论文（已存在）',
+    'btn.guideOpen': '打开示例项目',
+    'btn.guideOpenExists': '打开示例项目（已存在）',
     'btn.guideReset': '重置示例',
     'btn.guideClose': '关闭引导',
-    'btn.newProject': '新建论文项目',
+    'btn.newProject': '新建项目',
     'btn.npCreate': '创建',
+    'btn.npTabNew': '新建项目',
+    'btn.npTabAdd': '加入已有文件夹',
+    'btn.npJoin': '加入',
+    'page.projectAdd': '加入已有文件夹',
+    'np.addDesc': '这个文件夹里要有 paperkit.toml。登记完就能在项目列表里选它。',
     'project.current': '当前',
     'project.listEmpty': '还没有论文项目。',
+    'project.actionEdit': '编辑',
+    'project.actionDelete': '删除',
+    'project.actionLoad': '载入项目',
+    'project.actionCopy': '复制路径',
+    'project.editName': '名称',
+    'project.editDesc': '详情',
+    'project.editPath': '路径',
+    'project.editSave': '保存',
+    'project.editCancel': '取消',
+    'project.removed': '已从列表移除（文件夹和正文都没动）',
+    'project.copied': '路径已复制',
+    'project.copyFailed': '复制不了：请手动选中路径复制',
     'np.creating': '创建中…',
     'np.created': '已创建：{name}',
   },
@@ -310,7 +332,8 @@ const I18N = {
     'ph.signer': 'Who signed it (required for sign-off)',
     'token.paste': 'Paste token',
     'token.need': 'Token required',
-    'sidebar.noProject': 'No project',
+    'sidebar.noProject': 'No project selected — pick or create one in Project Management',
+    'btn.projectManage': 'Project Management',
     'guide.title': 'Getting started',
     'guide.desc': 'Walk one sample paper end to end: see the issues → change one number → go green. Your own paper is untouched.',
     'guide.bar': 'Getting started',
@@ -327,14 +350,31 @@ const I18N = {
     'guide.readyMini': 'Sample is ready: click “Start and connect”, then open the workbench.',
     'guide.opened': 'Sample paper opened',
     'guide.resetDone': 'Sample reset',
-    'btn.guideOpen': 'Open the sample paper',
-    'btn.guideOpenExists': 'Open the sample paper (already there)',
+    'btn.guideOpen': 'Open the sample project',
+    'btn.guideOpenExists': 'Open the sample project (already there)',
     'btn.guideReset': 'Reset the sample',
     'btn.guideClose': 'Close the guide',
     'btn.newProject': 'New project',
     'btn.npCreate': 'Create',
+    'btn.npTabNew': 'New project',
+    'btn.npTabAdd': 'Add existing folder',
+    'btn.npJoin': 'Add',
+    'page.projectAdd': 'Add existing folder',
+    'np.addDesc': 'The folder must contain paperkit.toml. Once registered you can pick it in the project list.',
     'project.current': 'Current',
     'project.listEmpty': 'No project yet.',
+    'project.actionEdit': 'Edit',
+    'project.actionDelete': 'Delete',
+    'project.actionLoad': 'Load project',
+    'project.actionCopy': 'Copy path',
+    'project.editName': 'Name',
+    'project.editDesc': 'Description',
+    'project.editPath': 'Path',
+    'project.editSave': 'Save',
+    'project.editCancel': 'Cancel',
+    'project.removed': 'Removed from the list (the folder and its files are untouched)',
+    'project.copied': 'Path copied',
+    'project.copyFailed': 'Could not copy: select the path and copy it by hand',
     'np.creating': 'Creating…',
     'np.created': 'Created: {name}',
   },
@@ -599,16 +639,16 @@ const ALL_PAGES = Object.keys(PAGE_LABEL);
 // 工作台本身没有导航项——章节才是入口；项目视图只由侧栏顶部按钮进入。
 // AI 起草是宿主专属：网页里没有宿主 agent，页面会自己说清为什么不能起草。
 
-/** 启动落在哪一页：工作台——它才是这套界面的入口。 */
+/** 启动落在哪一页：项目管理——一个文件夹就是一个项目，先选项目再干活。 */
 function defaultPage() {
-  return 'workbench';
+  return 'project';
 }
 
 /** 地址栏里的 hash → 页名；不认识就是空。 */
 function pageFromHash() {
   const raw = String(location.hash || '').replace(/^#\/?/, '');
-  if (raw === 'project/new') {
-    return 'project/new';
+  if (raw === 'project/new' || raw === 'project/add') {
+    return raw;
   }
   // 项目的其它子路由不认：回项目列表页（非法子路由不许停在空白面板上）。
   if (raw.startsWith('project/')) {
@@ -617,9 +657,11 @@ function pageFromHash() {
   return ALL_PAGES.includes(raw) ? raw : '';
 }
 
-/** 面板 id：项目页有两级（列表 / 新建）。 */
+/** 面板 id：新建与「加入已有文件夹」共用新建页那个面板（里面是两个页签）。 */
 function panelIdFor(tab) {
-  return tab === 'project/new' ? 'panel-project-new' : 'panel-' + tab;
+  return (tab === 'project/new' || tab === 'project/add')
+    ? 'panel-project-new'
+    : 'panel-' + tab;
 }
 
 let suppressHash = false;
@@ -640,14 +682,16 @@ function writeHash(tab, replace) {
 function updateTitle() {
   const pageKey = state.tab === 'project' && state.projectView === 'new'
     ? 'page.projectNew'
-    : PAGE_LABEL[state.tab];
+    : state.tab === 'project' && state.projectView === 'add'
+      ? 'page.projectAdd'
+      : PAGE_LABEL[state.tab];
   const label = pageKey ? t(pageKey, 'FactScribe') : 'FactScribe';
   const wbName = String(state.workbenchProject?.project || state.workbenchStatus?.project || '').trim();
   document.title = wbName ? label + ' · ' + wbName : label;
 }
 
 function switchTab(tab, opts = {}) {
-  // 项目页有两级：'project'（列表）与 'project/new'（新建表单）。
+  // 项目页有三态：'project'（列表）、'project/new'（新建）、'project/add'（加入已有文件夹）。
   const [base, sub] = String(tab || '').split('/');
   state.tab = base;
   state.projectView = base === 'project' ? (sub || 'list') : 'list';
@@ -682,8 +726,8 @@ function onHashChange() {
     history.replaceState(null, '', '#/' + fallback);
     return;
   }
-  const view = tab === 'project/new' ? 'new' : 'list';
-  const same = state.tab === (tab === 'project/new' ? 'project' : tab)
+  const view = tab.startsWith('project/') ? tab.slice('project/'.length) : 'list';
+  const same = state.tab === (tab.startsWith('project/') ? 'project' : tab)
     && state.projectView === view;
   if (!same) {
     switchTab(tab, { fromHash: true });
@@ -1029,7 +1073,7 @@ function projectBusy(flag) {
 }
 
 function renderProjects() {
-  if (state.projectView === 'new') {
+  if (state.projectView === 'new' || state.projectView === 'add') {
     renderNewProject();
     return;
   }
@@ -1099,8 +1143,9 @@ function shortPath(path, keep = 3) {
   return '…/' + parts.slice(-keep).join('/');
 }
 
-/** 左栏的项目列表：名称 + 路径 + 详情一行；当前项目带「当前」徽标。
+/** 左栏的项目列表：手风琴。点一行展开那一条，里面是四个动作。
 
+    同一时刻只展开一条（state.projectOpen 记着路径）；再点一次收起。
     新手引导的示例论文不在列表里（服务端标了 guide:true）——它是示例，
     不是人自己的论文。
 */
@@ -1124,15 +1169,136 @@ function renderProjectList() {
     const isCurrent = path === current;
     const name = p.name || path.split('/').filter(Boolean).pop() || path;
     const desc = String(p.description || '').trim();
-    return '<li class="project-item' + (isCurrent ? ' is-current' : '') + '">' +
-      '<button class="project-item-main" type="button" data-path="' + esc(path) + '">' +
+    const open = state.projectOpen === path;
+    const editing = state.projectEdit === path;
+    return '<li class="project-item' + (isCurrent ? ' is-current' : '') +
+      (open ? ' is-open' : '') + '">' +
+      '<button class="project-item-main" type="button" data-path="' + esc(path) +
+      '" aria-expanded="' + String(open) + '">' +
       '<span class="project-item-name">' + esc(name) +
       (isCurrent ? '<span class="project-badge">' + esc(t('project.current')) + '</span>' : '') +
       '</span>' +
       '<span class="project-item-path" title="' + esc(path) + '">' + esc(shortPath(path)) + '</span>' +
       (desc ? '<span class="project-item-desc">' + esc(desc) + '</span>' : '') +
-      '</button></li>';
+      '</button>' +
+      (open ? projectItemActions(path, name, desc, editing) : '') +
+      '</li>';
   }).join('');
+}
+
+/** 展开后的那一块：编辑 / 删除 / 载入项目 / 复制路径（编辑时多一个小表单）。 */
+function projectItemActions(path, name, desc, editing) {
+  const actions = [
+    ['edit', t('project.actionEdit')],
+    ['delete', t('project.actionDelete')],
+    ['load', t('project.actionLoad')],
+    ['copy', t('project.actionCopy')],
+  ].map(([action, label]) =>
+    '<button class="btn project-item-act" type="button" data-action="' + action +
+    '" data-path="' + esc(path) + '">' + esc(label) + '</button>').join('');
+  const form = editing
+    ? '<div class="project-edit" data-path="' + esc(path) + '">' +
+      '<label class="field"><span>' + esc(t('project.editName')) + '</span>' +
+      '<input class="project-edit-name" type="text" autocomplete="off" value="' + esc(name) + '" /></label>' +
+      '<label class="field"><span>' + esc(t('project.editDesc')) + '</span>' +
+      '<input class="project-edit-desc" type="text" autocomplete="off" value="' + esc(desc) + '" /></label>' +
+      '<label class="field"><span>' + esc(t('project.editPath')) + '</span>' +
+      '<input type="text" value="' + esc(path) + '" readonly /></label>' +
+      '<div class="panel-actions">' +
+      '<button class="btn btn-primary" type="button" data-action="save-edit" data-path="' + esc(path) + '">' +
+      esc(t('project.editSave')) + '</button>' +
+      '<button class="btn" type="button" data-action="cancel-edit" data-path="' + esc(path) + '">' +
+      esc(t('project.editCancel')) + '</button>' +
+      '</div></div>'
+    : '';
+  return '<div class="project-item-actions">' + actions + form + '</div>';
+}
+
+/** 展开条里的动作：编辑 / 删除 / 载入项目 / 复制路径。 */
+async function projectItemAction(action, path) {
+  if (action === 'edit') {
+    state.projectEdit = path;
+    renderProjects();
+    return;
+  }
+  if (action === 'cancel-edit') {
+    state.projectEdit = '';
+    renderProjects();
+    return;
+  }
+  if (action === 'copy') {
+    await copyProjectPath(path);
+    return;
+  }
+  if (action === 'delete') {
+    await removeProjectFromList(path);
+    return;
+  }
+  if (action === 'load') {
+    await loadProjectFromList(path);
+  }
+}
+
+/** 载入项目：网页让服务切到那个文件夹；MiniApp 把路径填进输入框（等人点启动）。 */
+async function loadProjectFromList(path) {
+  if (!path) return;
+  if (MODE.mini) {
+    state.projectPath = path;
+    const input = $('#project-path');
+    if (input) input.value = path;
+    renderProjects();
+    toast('已选中：' + path);
+    return;
+  }
+  await chooseProject(path);
+}
+
+/** 从列表移除一个项目：只动登记册，文件夹和正文一个字都不改。危险动作：先问一次。 */
+async function removeProjectFromList(path) {
+  if (!path) return;
+  if (!confirm('从列表移除这个项目？\n（文件夹和正文都不会动）')) return;
+  const data = await api('/api/projects?path=' + encodeURIComponent(path), { method: 'DELETE' });
+  state.projects = Array.isArray(data.projects) ? data.projects : [];
+  state.projectPath = data.lastPath || '';
+  if (state.projectOpen === path) {
+    state.projectOpen = '';
+    state.projectEdit = '';
+  }
+  if (state.run && state.run.project === path) {
+    $('#workbench-status').textContent = '这个项目还在运行；先点「停止工作台」再移除。';
+  } else {
+    $('#workbench-status').textContent = t('project.removed');
+  }
+  renderProjects();
+  renderWorkbench();
+}
+
+/** 复制路径到剪贴板。剪贴板不可用就说清楚，不假装复制过了。 */
+async function copyProjectPath(path) {
+  try {
+    if (!navigator.clipboard || !navigator.clipboard.writeText) throw new Error('no clipboard');
+    await navigator.clipboard.writeText(String(path || ''));
+    toast(t('project.copied'));
+  } catch {
+    toast(t('project.copyFailed'));
+  }
+}
+
+/** 保存编辑：改登记册的 name/description，并写进项目自己的 paperkit.toml。 */
+async function saveProjectEdit(path) {
+  const box = $$('.project-edit').find((el) => el.dataset.path === path);
+  if (!box) return;
+  const name = String(box.querySelector('.project-edit-name')?.value ?? '').trim();
+  const desc = String(box.querySelector('.project-edit-desc')?.value ?? '').trim();
+  if (!name) throw new Error('项目名称不能为空');
+  const data = await api(wb('/projects/update'), {
+    method: 'POST',
+    body: JSON.stringify({ path, name, description: desc }),
+  });
+  state.projects = Array.isArray(data.projects) ? data.projects : state.projects;
+  state.projectEdit = '';
+  renderProjects();
+  toast('已更新：' + String(data?.project?.name || name));
 }
 
 // ------------------------------------------------------------ 新建项目页
@@ -1178,12 +1344,23 @@ function openNewProjectForm() {
   renderNewProject();
 }
 
-/** 新建页只管错误提示；字段值由 openNewProjectForm 填、人自己改。 */
+/** 新建页只管错误提示与两个页签的显隐；字段值由 openNewProjectForm 填、人自己改。 */
 function renderNewProject() {
   const err = $('#np-error');
-  if (!err) return;
-  err.textContent = state.npError || '';
-  err.hidden = !state.npError;
+  if (err) {
+    err.textContent = state.npError || '';
+    err.hidden = !state.npError;
+  }
+  const isAdd = state.projectView === 'add';
+  const newSection = $('#np-new-section');
+  const addSection = $('#np-add-section');
+  if (newSection) newSection.hidden = isAdd;
+  if (addSection) addSection.hidden = !isAdd;
+  for (const btn of $$('.np-tab')) {
+    const on = btn.dataset.view === (isAdd ? 'add' : 'new');
+    btn.classList.toggle('is-active', on);
+    btn.setAttribute('aria-selected', String(on));
+  }
 }
 
 function showNpError(message) {
@@ -1279,7 +1456,7 @@ async function chooseProject(path) {
 }
 
 async function addProject(rawPath) {
-  const path = String(rawPath ?? $('#project-path').value ?? '').trim();
+  const path = String(rawPath ?? state.projectPath ?? '').trim();
   if (!path) throw new Error('先填论文项目文件夹');
   const data = await api('/api/projects', {
     method: 'POST',
@@ -1293,19 +1470,18 @@ async function addProject(rawPath) {
   return data.project;
 }
 
-async function forgetProject() {
-  const path = state.projectPath;
-  if (!path) throw new Error('先选一个论文项目');
-  const data = await api('/api/projects?path=' + encodeURIComponent(path), { method: 'DELETE' });
-  state.projects = Array.isArray(data.projects) ? data.projects : [];
-  state.projectPath = data.lastPath || '';
-  if (state.run && state.run.project === path) {
-    $('#workbench-status').textContent = '这个项目还在运行；先点「停止工作台」再移除。';
-  } else {
-    $('#workbench-status').textContent = '已从列表移除（文件夹和正文都没动）';
+/** 「加入已有文件夹」：只登记进册子，不改那个文件夹里的任何东西。 */
+async function addExistingProject() {
+  const path = String($('#np-existing-path')?.value ?? '').trim();
+  const note = $('#np-add-note');
+  if (!path) {
+    if (note) note.textContent = '先填论文项目文件夹';
+    throw new Error('先填论文项目文件夹');
   }
-  renderProjects();
-  renderWorkbench();
+  const project = await addProject(path);
+  if (note) note.textContent = '已加入：' + project.name;
+  toast('已加入：' + project.name);
+  switchTab('project');
 }
 
 async function useHostProject() {
@@ -1383,18 +1559,23 @@ async function stopWorkbench() {
   }
 }
 
-/** 侧栏顶部的项目按钮：显示当前论文项目名；没有就写「未选择」。 */
+/** 侧栏顶部：项目按钮 + 当前项目名；没有项目就写那句默认提示。 */
 function renderSidebarProject() {
   const el = $('#sidebar-project-name');
   if (!el) return;
   const project = state.workbenchProject;
-  const name = String(project?.project || project?.root || '').trim();
+  let name = String(project?.project || '').trim();
+  if (!name && state.projectPath) {
+    // 服务端还没载入项目时，登记册里的名字先用着。
+    const row = state.projects.find((p) => p.path === state.projectPath);
+    name = String(row?.name || '').trim();
+  }
   el.textContent = name || t('sidebar.noProject');
   const btn = $('#btn-sidebar-project');
   if (btn) {
     btn.title = name
       ? '当前项目：' + name + '（点它去项目页换项目）'
-      : '还没选论文项目（点它去项目页选一个）';
+      : '还没选论文项目（点它去项目页选一个或新建一个）';
   }
 }
 
@@ -1536,8 +1717,8 @@ async function openGuideSample() {
 
 /** 重置示例：删掉重装一份，再刷新项目与审计。 */
 async function resetGuideSample() {
-  const btn = $('#btn-guide-reset');
-  if (btn) btn.disabled = true;
+  const buttons = [$('#btn-guide-reset'), $('#btn-guide-reset-bar')].filter(Boolean);
+  for (const b of buttons) b.disabled = true;
   try {
     const data = await api(wb('/samples/guide'), {
       method: 'POST',
@@ -1557,7 +1738,7 @@ async function resetGuideSample() {
   } catch (err) {
     toast('重置示例失败：' + err.message);
   } finally {
-    if (btn) btn.disabled = false;
+    for (const b of buttons) b.disabled = false;
   }
 }
 
@@ -2688,22 +2869,25 @@ function wire() {
     const copy = () => { mirror.textContent = status.textContent; };
     new MutationObserver(copy).observe(status, { childList: true, characterData: true, subtree: true });
   }
-  // 项目列表：点一项就切到那个文件夹（网页让服务切过去，MiniApp 填路径）。
+  // 项目列表：点一行展开那一条（手风琴，同一时刻只展开一条）；
+  // 展开后的四个动作：编辑 / 删除 / 载入项目 / 复制路径。
   $('#project-list').addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-path]');
-    if (!btn) return;
-    const path = btn.dataset.path || '';
-    if (!path) return;
-    if (MODE.mini) {
-      state.projectPath = path;
-      $('#project-path').value = path;
-      renderProjects();
+    const act = e.target.closest('[data-action]');
+    if (act) {
+      e.stopPropagation();
+      projectItemAction(act.dataset.action, act.dataset.path || '').catch((err) => {
+        $('#workbench-status').textContent = '操作失败：' + err.message;
+        toast('操作失败：' + err.message);
+      });
       return;
     }
-    chooseProject(path).catch((e) => {
-      $('#workbench-status').textContent = '切换项目失败：' + e.message;
-      toast('切换项目失败：' + e.message);
-    });
+    const row = e.target.closest('.project-item-main');
+    if (!row) return;
+    const path = row.dataset.path || '';
+    if (!path) return;
+    state.projectOpen = state.projectOpen === path ? '' : path;
+    if (!state.projectOpen) state.projectEdit = '';
+    renderProjects();
   });
   // 新建项目：右栏那个大按钮 → #/project/new
   $('#btn-new-project').addEventListener('click', () => {
@@ -2716,21 +2900,19 @@ function wire() {
   $('#btn-np-cancel').addEventListener('click', () => {
     switchTab('project');
   });
-  $('#project-path').addEventListener('input', () => {
-    state.projectPath = $('#project-path').value.trim();
-    projectBusy();
-  });
-  $('#btn-project-add').addEventListener('click', () => {
-    const run = MODE.mini
-      ? addProject()
-      : chooseProject(String($('#project-path').value ?? '').trim());
-    run.catch((e) => { $('#workbench-status').textContent = '加入失败：' + e.message; toast('加入失败：' + e.message); });
+  // 新建页的两个页签：新建 / 加入已有文件夹（各自一个 hash）。
+  $('#btn-np-tab-new').addEventListener('click', () => switchTab('project/new'));
+  $('#btn-np-tab-add').addEventListener('click', () => switchTab('project/add'));
+  $('#btn-np-add-cancel').addEventListener('click', () => switchTab('project'));
+  $('#btn-np-existing-add').addEventListener('click', () => {
+    addExistingProject().catch((e) => {
+      const note = $('#np-add-note');
+      if (note) note.textContent = '加入失败：' + e.message;
+      toast('加入失败：' + e.message);
+    });
   });
   $('#btn-project-host').addEventListener('click', () => {
     useHostProject().catch((e) => { $('#workbench-status').textContent = '用当前对话项目失败：' + e.message; });
-  });
-  $('#btn-project-forget').addEventListener('click', () => {
-    forgetProject().catch((e) => { $('#workbench-status').textContent = '移除失败：' + e.message; });
   });
   $('#btn-project-python').addEventListener('click', () => {
     saveProjectPython().catch((e) => { $('#workbench-status').textContent = '保存解释器失败：' + e.message; });
@@ -2758,18 +2940,15 @@ function wire() {
   $('#btn-workbench-audit').addEventListener('click', () => {
     runWorkbenchAudit().catch((e) => { $('#workbench-status').textContent = '审计失败：' + e.message; toast('审计失败：' + e.message); });
   });
-  $('#btn-workbench-load').addEventListener('click', () => {
-    loadWorkbenchProject().catch((e) => { $('#workbench-status').textContent = '载入失败：' + e.message; });
-  });
   // 新手引导：装示例、切过去、跟着五步走。
   $('#btn-guide-open').addEventListener('click', () => {
     openGuideSample();
   });
+  // 「重置示例」有两个入口：项目页右栏与工作台引导条。
   $('#btn-guide-reset').addEventListener('click', () => {
     resetGuideSample();
   });
-  // 项目页引导卡片里的「重置示例」：同一个动作，另一个入口。
-  $('#btn-guide-reset-card').addEventListener('click', () => {
+  $('#btn-guide-reset-bar').addEventListener('click', () => {
     resetGuideSample();
   });
   $('#btn-guide-close').addEventListener('click', () => {
@@ -2982,17 +3161,6 @@ async function init() {
       }
     }
   });
-  if (MODE.mini) {
-    try {
-      const saved = localStorage.getItem('minifactscribe.tab')
-        ?? localStorage.getItem('factgate.tab');
-      // 地址栏优先：只有没给 hash 时才回退到上次停留的页签。
-      // 只认现在还存在的页——旧版存下来的页名早被删了，切过去会停在空白面板上。
-      if (saved && ALL_PAGES.includes(saved) && !hashPage) switchTab(saved, { replace: true });
-    } catch {
-      /* 忽略 */
-    }
-  }
 }
 
 init();
