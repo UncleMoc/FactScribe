@@ -72,6 +72,14 @@ const state = {
   citeLoading: false,
   wbMode: 'source',
   wbPdfUrl: '',
+  // 右栏两个面板互斥：'issues'（要处理的问题）| 'ai'（AI 聊天）。
+  wbSide: 'issues',
+  // AI 聊天的历史：[{role:'user'|'assistant', text}]，按项目存在本地。
+  chat: [],
+  // 聊天里等着的工具审批卡（宿主 agent 问要不要放行）。
+  chatApprovals: [],
+  // 当前聊天历史属于哪个项目（键＝factscribe.chat.<路径>）；换项目才换历史。
+  chatKey: null,
   // 当前选中的章节（空＝还没选过）。引导条的第 ① 步就看它。
   currentSection: '',
   // 新手引导：示例论文的路径 + 本次打开后的两个进度标志。
@@ -127,8 +135,9 @@ const I18N = {
     'btn.preview': '预览',
     'btn.buildPreview': '编译预览',
     'btn.wbAudit': '用工作台审计',
-    'btn.sendToAi': '发给 AI 起草',
-    'btn.goToAi': '去 AI 起草',
+    'btn.sideIssues': '要处理的问题',
+    'btn.sideAi': 'AI 聊天',
+    'btn.chatSend': '发送',
     'btn.freeze': '冻结',
     'btn.unfreeze': '解冻',
     'btn.connect': '连接',
@@ -268,8 +277,9 @@ const I18N = {
     'btn.preview': 'Preview',
     'btn.buildPreview': 'Build preview',
     'btn.wbAudit': 'Audit with workbench',
-    'btn.sendToAi': 'Send to AI draft',
-    'btn.goToAi': 'Go to AI draft',
+    'btn.sideIssues': 'Issues to fix',
+    'btn.sideAi': 'AI chat',
+    'btn.chatSend': 'Send',
     'btn.freeze': 'Freeze',
     'btn.unfreeze': 'Unfreeze',
     'btn.connect': 'Connect',
@@ -823,9 +833,9 @@ function applyMode() {
       el.disabled = true;
       el.title = '这是 MiniApp 专属按钮；网页里由命令行启动的服务已经就绪';
     }
-    // AI 入口：网页里没有宿主 agent，禁用并说清原因。
-    setWbAiNote('网页模式不能起草：需要 MiniApp 宿主。');
-    for (const sel of ['#wb-ai-input', '#btn-wb-ai-send', '#btn-wb-ai-open']) {
+    // AI 聊天：网页里没有宿主 agent，输入禁用并说清原因；历史仍可看。
+    setChatNotice('网页模式不能起草：需要 MiniApp 宿主');
+    for (const sel of ['#wb-chat-input', '#wb-chat-send']) {
       const el = $(sel);
       if (!el) continue;
       el.disabled = true;
@@ -903,12 +913,12 @@ function aiSectionFile() {
   return $('#workbench-section-select')?.value || '';
 }
 
-function aiPrompt() {
+/** 拼提示：当前节 + 事实账 + 硬约束。AI 起草页与右栏的 AI 聊天共用这一套。 */
+function buildSectionPrompt(request) {
   const file = aiSectionFile();
   const row = (state.workbenchProject?.sections || []).find((s) => s.file === file);
   const facts = (state.workbenchProject?.facts || []).map((f) =>
     '- ' + f.id + ' | ' + (f.claim || '') + ' | ' + (f.value || '') + ' | ' + (f.source || ''));
-  const instruction = $('#ai-instruction').value.trim();
   return [
     '你是论文写作助手，正在帮作者起草或改写一节 LaTeX 正文。',
     '硬约束：正文里的每个数字都必须来自下面的事实账；不得编造数字、引用或实验；',
@@ -916,7 +926,7 @@ function aiPrompt() {
     '',
     '当前节：' + file,
     '',
-    '用户要求：' + (instruction || '按事实账起草/改写本节。'),
+    '用户要求：' + (request || '按事实账起草/改写本节。'),
     '',
     '当前正文：',
     row ? row.text : '（空）',
@@ -924,6 +934,11 @@ function aiPrompt() {
     '事实账（id | 主张 | 值 | 来源）：',
     facts.length ? facts.join('\n') : '（账里没有事实——不要写任何数字，先提示作者记账）',
   ].join('\n');
+}
+
+function aiPrompt() {
+  const instruction = $('#ai-instruction')?.value.trim() || '';
+  return buildSectionPrompt(instruction || '按事实账起草/改写本节。');
 }
 
 function aiEvent(kind, text, extra = {}) {
@@ -1776,6 +1791,9 @@ function renderWorkbench() {
   renderProjects();
   $('#btn-workbench-audit').disabled = !w.configured;
   renderWbMeta();
+  // 右栏两面板互斥；聊天记录跟着当前项目走。
+  renderWbSide();
+  loadChat();
 
   if (!w.configured) {
     $('#workbench-audit').innerHTML = '';
@@ -2265,40 +2283,201 @@ function jumpToLine(file, line) {
   ta.scrollTop = Math.max(0, (target - 3) * lineHeight);
 }
 
-/** 和 AI 说：把要求带进 AI 页签，AI 面板本身不在这里重做一遍。 */
-function sendWbToAi() {
-  if (!MODE.mini) {
-    setWbAiNote('网页模式不能起草：需要 MiniApp 宿主。');
-    return;
+// ------------------------------------- 工作台：快捷插入 / 右栏互斥 / AI 聊天
+//
+// 快捷插入：在光标处插入模板，槽位（{} 里）自动落到光标上。
+// 右栏：问题与 AI 聊天互斥，同时只显示一个。
+// 聊天：历史按项目存在本地（factscribe.chat.<项目路径>），刷新后还在。
+
+/** 模板里的槽位：第一个空的 {}；没有就找第一个不是环境参数的 {…}。 */
+function snippetSlot(template) {
+  const empty = template.indexOf('{}');
+  if (empty >= 0) return { start: empty + 1, end: empty + 1 };
+  for (let i = 0; i < template.length; i += 1) {
+    if (template[i] !== '{') continue;
+    const close = template.indexOf('}', i);
+    if (close < 0) break;
+    // \begin{...} / \end{...} 是环境名，不是让人填的槽位。
+    if (/\\(begin|end)$/.test(template.slice(Math.max(0, i - 6), i))) {
+      i = close;
+      continue;
+    }
+    return { start: close, end: close };
   }
-  const file = $('#workbench-section-select')?.value || '';
-  if (!file) {
-    toast('先在左边选一节');
-    return;
-  }
-  const input = $('#wb-ai-input');
-  const want = String(input?.value || '').trim();
-  const instruction = $('#ai-instruction');
-  if (instruction) instruction.value = '只改这一节：' + file + '。要求：' + want;
-  switchTab('ai');
-  renderAi();
-  toast('已带到 AI 起草页：' + file);
+  return null;
 }
 
-/** 只切页签，不带要求——AI 页签自己会显示当前节。 */
-function openAiTab() {
-  if (!MODE.mini) {
-    setWbAiNote('网页模式不能起草：需要 MiniApp 宿主。');
-    return;
+/** 插入后光标停在哪：槽位 > data-caret（mid 或锚点子串）> 文末。 */
+function snippetCaret(template, spec) {
+  const slot = snippetSlot(template);
+  if (slot) return slot;
+  if (spec === 'mid') {
+    const at = Math.floor(template.length / 2);
+    return { start: at, end: at };
   }
-  switchTab('ai');
-  renderAi();
+  if (spec && spec !== 'end') {
+    const at = template.indexOf(spec);
+    if (at >= 0) return { start: at + spec.length, end: at + spec.length };
+  }
+  return { start: template.length, end: template.length };
 }
 
-/** AI 入口在网页模式下要说明为什么点不了。 */
-function setWbAiNote(text) {
-  const el = $('#wb-ai-note');
-  if (el) el.textContent = text;
+/** 在光标处插入一段模板；槽位落在花括号里，直接接着写。 */
+function insertSnippet(template, spec) {
+  const ta = $('#workbench-section-text');
+  if (!ta) return;
+  if (ta.readOnly) {
+    toast('只读工作台：写操作需要 --allow-write');
+    return;
+  }
+  const value = ta.value;
+  const start = typeof ta.selectionStart === 'number' ? ta.selectionStart : value.length;
+  const end = typeof ta.selectionEnd === 'number' ? ta.selectionEnd : start;
+  const caret = snippetCaret(template, spec);
+  ta.value = value.slice(0, start) + template + value.slice(end);
+  const at = start + caret.start;
+  ta.focus();
+  ta.setSelectionRange(at, start + caret.end);
+  ta.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+/** 右栏：问题与 AI 聊天互斥，同时只显示一个。 */
+function renderWbSide() {
+  const side = state.wbSide === 'ai' ? 'ai' : 'issues';
+  const issues = $('#wb-side-issues');
+  const ai = $('#wb-side-ai');
+  if (issues) issues.hidden = side !== 'issues';
+  if (ai) ai.hidden = side !== 'ai';
+  const issuesBtn = $('#btn-wb-side-issues');
+  const aiBtn = $('#btn-wb-side-ai');
+  if (issuesBtn) issuesBtn.classList.toggle('is-active', side === 'issues');
+  if (aiBtn) aiBtn.classList.toggle('is-active', side === 'ai');
+}
+
+/** 聊天历史存在本地：键是 factscribe.chat.<项目路径>，刷新后还在。 */
+const CHAT_KEY_PREFIX = 'factscribe.chat.';
+
+function chatStorageKey() {
+  const root = String(state.workbenchProject?.root || state.projectPath || '');
+  return root ? CHAT_KEY_PREFIX + root : '';
+}
+
+/** 换项目才换历史：同一个项目时内存里那份已经是最新的。 */
+function loadChat() {
+  const key = chatStorageKey();
+  if (key === state.chatKey) return;
+  state.chatKey = key;
+  state.chat = [];
+  state.chatApprovals = [];
+  if (key) {
+    try {
+      const raw = localStorage.getItem(key);
+      const list = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(list)) {
+        state.chat = list.filter((m) => m && typeof m.text === 'string' &&
+          (m.role === 'user' || m.role === 'assistant'));
+      }
+    } catch {
+      state.chat = [];
+    }
+  }
+  renderChat();
+}
+
+function saveChat() {
+  const key = chatStorageKey();
+  if (!key) return;
+  try {
+    localStorage.setItem(key, JSON.stringify(state.chat));
+  } catch {
+    // 存不下就算了：聊天照常显示，只是不留历史。
+  }
+}
+
+/** 聊天区那行说明（网页模式下说清为什么发不了）。 */
+function setChatNotice(text) {
+  const el = $('#wb-chat-notice');
+  if (el) el.textContent = String(text || '');
+}
+
+/** 聊天记录：用户靠右、助手靠左；有新消息就滚到底部。 */
+function renderChat() {
+  const log = $('#wb-chat-log');
+  if (!log) return;
+  const msgs = state.chat.map((m) =>
+    '<div class="wb-msg wb-msg-' + (m.role === 'user' ? 'user' : 'ai') + '">' +
+    '<div class="wb-msg-role">' + (m.role === 'user' ? '我' : 'AI') + '</div>' +
+    '<div class="wb-msg-text">' + esc(m.text) + '</div></div>').join('');
+  const approvals = state.chatApprovals.map((a) =>
+    '<div class="approval-card"><b>工具等待批准：' + esc(a.toolName || '') + '</b>' +
+    (a.reason ? '<div class="muted-note">' + esc(a.reason) + '</div>' : '') +
+    (a.toolInput ? '<code>' + esc(String(a.toolInput).slice(0, 500)) + '</code>' : '') +
+    '<div class="approval-actions">' +
+    '<button class="btn btn-primary" data-chat-approval="' + esc(a.id) + '" data-decision="allowOnce">允许一次</button>' +
+    '<button class="btn" data-chat-approval="' + esc(a.id) + '" data-decision="deny">拒绝</button>' +
+    '</div></div>').join('');
+  log.innerHTML = msgs || '<div class="line-empty">还没有对话。问一句，或让 AI 按事实账改这一节。</div>';
+  if (approvals) log.insertAdjacentHTML('beforeend', approvals);
+  log.scrollTop = log.scrollHeight;
+}
+
+/** 发一条：提示里带上当前节与事实账（复用 AI 起草那套拼提示）。 */
+async function sendChat() {
+  const input = $('#wb-chat-input');
+  const text = String(input?.value || '').trim();
+  if (!text) return;
+  if (!MODE.mini) {
+    setChatNotice('网页模式不能起草：需要 MiniApp 宿主');
+    return;
+  }
+  const agent = aiAgent();
+  if (!agent?.run) {
+    setChatNotice('当前页面没有宿主 agent；请从论文项目的对话里打开本页');
+    return;
+  }
+  state.chat.push({ role: 'user', text });
+  input.value = '';
+  const reply = { role: 'assistant', text: '' };
+  state.chat.push(reply);
+  renderChat();
+  const requestId = (globalThis.crypto?.randomUUID?.() || ('chat-' + Date.now() + '-' + Math.random()));
+  try {
+    const result = await agent.run({ text: buildSectionPrompt(text), requestId },
+      { onEvent: (e) => handleChatEvent(e, reply) });
+    if (result?.text) reply.text = result.text;
+    if (result?.error) reply.text += (reply.text ? '\n' : '') + 'Agent 错误：' + result.error;
+    if (result?.pendingQuestion) reply.text += (reply.text ? '\n' : '') + 'Agent 在等问卷；请到聊天侧面板回答。';
+  } catch (err) {
+    reply.text = '发送失败：' + (err?.message || err);
+  }
+  renderChat();
+  saveChat();
+}
+
+/** 聊天里的流式事件：文字直接追加到当前那条助手消息。 */
+function handleChatEvent(event, reply) {
+  if (!event || typeof event !== 'object') return;
+  if (event.type === 'text.delta') {
+    reply.text += event.text || '';
+  } else if (event.type === 'message.committed') {
+    if (event.text) reply.text = event.text;
+  } else if (event.type === 'permission.requested') {
+    state.chatApprovals.push({ id: event.requestId, sessionId: event.sessionId,
+      toolName: event.toolName, reason: event.reason, toolInput: event.toolInput });
+  } else if (event.type === 'error') {
+    reply.text += (reply.text ? '\n' : '') + '错误：' + (event.message || event.text || '');
+  }
+  renderChat();
+}
+
+/** 审批卡：允许一次 / 拒绝。 */
+async function replyChatApproval(id, decision) {
+  const agent = aiAgent();
+  const item = state.chatApprovals.find((a) => String(a.id) === String(id));
+  if (!agent?.reply || !item) return;
+  await agent.reply({ sessionId: item.sessionId, requestId: item.id, decision });
+  state.chatApprovals = state.chatApprovals.filter((a) => a !== item);
+  renderChat();
 }
 
 
@@ -2726,11 +2905,14 @@ async function loadWorkbenchProject() {
       state.workbenchProject = null;
       state.wbEvidence = null;
       state.wbReports = null;
+      loadChat();
       renderWorkbench();
       return;
     }
     throw err;
   }
+  // 换了项目就换聊天历史；同一个项目时内存里那份已经是最新的。
+  loadChat();
   renderWorkbench();
   renderWorkbenchFacts();
   const project = state.workbenchProject;
@@ -2855,7 +3037,8 @@ async function runWorkbenchAudit() {
   state.workbenchAudit = await api(wb('/audit'), { method: 'POST' });
   // 引导条第 ④ 步：改过之后又重跑了审计。
   if (state.guide.edited) state.guide.auditedAfterEdit = true;
-  $('#workbench-status').textContent = '工作台审计完成';
+  // 审计跑完是常态，不是动作结果：状态行回到空闲（空），只留错误与明确动作。
+  $('#workbench-status').textContent = '';
   renderWorkbench();
   renderGuide();
 }
@@ -3048,12 +3231,38 @@ function wire() {
     jumpToLine(btn.dataset.jumpFile, Number(btn.dataset.jumpLine));
   });
 
-  // 工作台：和 AI 说（只做入口，AI 面板不在这里重做一遍）
-  $('#btn-wb-ai-send').addEventListener('click', () => {
-    sendWbToAi();
+  // 工作台：快捷插入——点一下在光标处插入模板，槽位落到花括号里
+  $('#wb-snippets').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-insert]');
+    if (!btn) return;
+    // 预览态下源码是藏着的：先切回源码，插入才有地方落。
+    if (state.wbMode !== 'source') {
+      state.wbMode = 'source';
+      renderWbMode();
+    }
+    insertSnippet(btn.dataset.insert || '', btn.dataset.caret || '');
   });
-  $('#btn-wb-ai-open').addEventListener('click', () => {
-    openAiTab();
+
+  // 工作台：右栏两个面板互斥（要处理的问题 / AI 聊天）
+  $('#btn-wb-side-issues').addEventListener('click', () => {
+    state.wbSide = 'issues';
+    renderWbSide();
+  });
+  $('#btn-wb-side-ai').addEventListener('click', () => {
+    state.wbSide = 'ai';
+    renderWbSide();
+  });
+
+  // 工作台：AI 聊天（发送 + 工具审批卡）
+  $('#wb-chat-send').addEventListener('click', () => {
+    sendChat().catch((e) => toast('发送失败：' + e.message));
+  });
+  $('#wb-chat-log').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-chat-approval]');
+    if (!btn) return;
+    replyChatApproval(btn.dataset.chatApproval, btn.dataset.decision).catch((err) => {
+      toast('审批失败：' + err.message);
+    });
   });
 
   // 工作台：事实、证据、编译、token
@@ -3122,6 +3331,8 @@ async function init() {
   if (MODE.mini) {
     const urlProject = new URLSearchParams(location.search).get('project') || '';
     if (urlProject) state.projectPath = urlProject;
+    // 聊天历史只跟项目路径有关：先读回来，别等后端应答。
+    loadChat();
     try {
       await loadProjects();
       // ?project=<文件夹>：AI 或用户从对话里带过来的路径，直接登记
@@ -3142,6 +3353,8 @@ async function init() {
     } catch (err) {
       $('#workbench-status').textContent = '项目列表读取失败：' + err.message;
     }
+    // 网页里项目路径来自服务端；聊天历史按这个路径读回来。
+    loadChat();
     if (state.token) {
       try {
         await loadWorkbenchStatus();

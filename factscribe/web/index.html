@@ -115,59 +115,85 @@
           <!-- 两栏工作区：源码+预览 / 要处理的问题+AI。章节入口在左侧栏。 -->
           <div id="wb-columns" class="wb-columns">
             <section class="wb-col wb-col-main" aria-label="当前节">
-              <div class="wb-col-head">
-                <div class="wb-mode" role="group" aria-label="看源码还是看预览">
-                  <button id="btn-wb-mode-source" class="btn wb-mode-btn is-active" type="button" data-i18n="btn.source">源码</button>
-                  <button id="btn-wb-mode-preview" class="btn wb-mode-btn" type="button" data-i18n="btn.preview">预览</button>
-                </div>
-                <div class="panel-actions">
-                  <span id="wb-current-section" class="muted-note"></span>
-                  <span id="workbench-save-state" class="muted-note"></span>
-                  <button id="btn-workbench-save" class="btn btn-primary" type="button" data-i18n="btn.saveSection">保存本节</button>
-                </div>
+              <!-- 快捷插入：点一下就在光标处插入模板，槽位（{} 里）自动落到光标上。 -->
+              <div id="wb-snippets" class="wb-snippets" role="toolbar" aria-label="快捷插入">
+                <button type="button" class="wb-snippet" data-insert="\midrule">\midrule</button>
+                <button type="button" class="wb-snippet" data-insert="\sys{}">\sys</button>
+                <button type="button" class="wb-snippet" data-insert="\cite{}">\cite</button>
+                <button type="button" class="wb-snippet" data-insert="\ref{}">\ref</button>
+                <button type="button" class="wb-snippet" data-insert="\label{sec:}">\label</button>
+                <button type="button" class="wb-snippet" data-insert="\fact{}">\fact</button>
+                <button type="button" class="wb-snippet" data-insert="$$" data-caret="mid">$…$</button>
+                <button type="button" class="wb-snippet" data-insert="\begin{equation}&#10;&#10;\end{equation}" data-caret="\begin{equation}">公式</button>
+                <button type="button" class="wb-snippet" data-insert="\begin{itemize}&#10;  \item &#10;\end{itemize}" data-caret="\item ">列表</button>
+                <button type="button" class="wb-snippet" data-insert="\begin{table}[ht]&#10;  \centering&#10;  \begin{tabular}{ll}&#10;    \toprule&#10;    列一 &amp; 列二 \\&#10;    \midrule&#10;    {} &amp; \\&#10;    \bottomrule&#10;  \end{tabular}&#10;\end{table}">表格</button>
+                <button type="button" class="wb-snippet" data-insert="\begin{figure}[ht]&#10;  \centering&#10;  \includegraphics{}&#10;  \caption{}&#10;  \label{}&#10;\end{figure}">图</button>
+                <button type="button" class="wb-snippet" data-insert="\footnote{}">脚注</button>
               </div>
-              <div id="wb-source-pane" class="wb-pane">
-                <div id="workbench-editor" hidden>
-                  <label class="editor-label" for="workbench-section-text">当前节（写给工作台项目）</label>
-                  <textarea id="workbench-section-text" class="editor" spellcheck="false" aria-label="工作台章节内容"></textarea>
+              <!-- 编辑器卡片：源码与预览合成一个分段控件，嵌在卡片右上角。 -->
+              <div class="wb-editor-card">
+                <div class="wb-col-head">
+                  <div class="panel-actions">
+                    <span id="wb-current-section" class="muted-note"></span>
+                    <span id="workbench-save-state" class="muted-note"></span>
+                  </div>
+                  <div class="panel-actions wb-col-head-right">
+                    <div class="wb-mode" role="group" aria-label="看源码还是看预览">
+                      <button id="btn-wb-mode-source" class="btn wb-mode-btn is-active" type="button" data-i18n="btn.source">源码</button>
+                      <button id="btn-wb-mode-preview" class="btn wb-mode-btn" type="button" data-i18n="btn.preview">预览</button>
+                    </div>
+                    <button id="btn-workbench-save" class="btn btn-success" type="button" data-i18n="btn.saveSection">保存本节</button>
+                  </div>
                 </div>
-                <div id="wb-section-empty" class="line-empty">还没载入工作台项目。先在上面载入或连接一个论文项目。</div>
-              </div>
-              <div id="wb-preview-pane" class="wb-pane" hidden>
-                <div class="panel-actions">
-                  <button id="btn-wb-preview-build" class="btn" type="button" data-i18n="btn.buildPreview">编译预览</button>
-                  <a id="wb-preview-open" class="link-btn" href="#" target="_blank" rel="noopener" hidden>在新标签打开 PDF</a>
-                  <span id="wb-preview-state" class="muted-note" role="status" aria-live="polite"></span>
+                <div id="wb-source-pane" class="wb-pane">
+                  <div id="workbench-editor" hidden>
+                    <label class="editor-label" for="workbench-section-text">当前节（写给工作台项目）</label>
+                    <textarea id="workbench-section-text" class="editor" spellcheck="false" aria-label="工作台章节内容"></textarea>
+                  </div>
+                  <div id="wb-section-empty" class="line-empty">还没载入工作台项目。先在上面载入或连接一个论文项目。</div>
                 </div>
-                <div id="wb-preview-error" class="wb-preview-error" hidden></div>
-                <embed id="wb-preview-pdf" type="application/pdf" title="编译后的 PDF 预览" />
+                <div id="wb-preview-pane" class="wb-pane" hidden>
+                  <div class="panel-actions">
+                    <button id="btn-wb-preview-build" class="btn" type="button" data-i18n="btn.buildPreview">编译预览</button>
+                    <a id="wb-preview-open" class="link-btn" href="#" target="_blank" rel="noopener" hidden>在新标签打开 PDF</a>
+                    <span id="wb-preview-state" class="muted-note" role="status" aria-live="polite"></span>
+                  </div>
+                  <div id="wb-preview-error" class="wb-preview-error" hidden></div>
+                  <embed id="wb-preview-pdf" type="application/pdf" title="编译后的 PDF 预览" />
+                </div>
               </div>
             </section>
 
-            <aside class="wb-col wb-col-side" aria-label="要处理的问题与 AI 入口">
+            <aside class="wb-col wb-col-side" aria-label="要处理的问题与 AI 聊天">
               <div class="wb-col-head">
-                <h3>要处理的问题</h3>
+                <!-- 右栏两个面板互斥：问题与 AI 聊天，同一时刻只显示一个。 -->
+                <div class="wb-mode wb-side-mode" role="group" aria-label="右栏看问题还是看 AI 聊天">
+                  <button id="btn-wb-side-issues" class="btn wb-mode-btn is-active" type="button" data-i18n="btn.sideIssues">要处理的问题</button>
+                  <button id="btn-wb-side-ai" class="btn wb-mode-btn" type="button" data-i18n="btn.sideAi">AI 聊天</button>
+                </div>
                 <div class="panel-actions">
                   <span id="wb-audit-meta" class="muted-note"></span>
                   <button id="btn-wb-open-browser" class="btn" type="button" hidden>在浏览器打开</button>
                   <button id="btn-workbench-audit" class="btn" type="button" data-i18n="btn.wbAudit">用工作台审计</button>
                 </div>
               </div>
-              <div id="workbench-audit" class="issues-list"></div>
-              <p id="wb-meta" class="wb-meta" title="这里只显示工作台项目的结果，与论文项目不是同一份内容"
-                data-note="这里只显示工作台项目的结果，与论文项目不是同一份内容"></p>
-
-              <div class="wb-col-head wb-ai-head">
-                <h3>和 AI 说</h3>
+              <!-- 问题面板：审计问题列表（含「跳到那一行」）。 -->
+              <div id="wb-side-issues" class="wb-side-panel">
+                <div id="workbench-audit" class="issues-list"></div>
+                <p id="wb-meta" class="wb-meta" title="这里只显示工作台项目的结果，与论文项目不是同一份内容"
+                  data-note="这里只显示工作台项目的结果，与论文项目不是同一份内容"></p>
               </div>
-              <p id="wb-ai-note" class="muted-note"></p>
-              <label class="field">
-                <span>这一节想怎么改</span>
-                <textarea id="wb-ai-input" rows="3" placeholder="例如：把实验部分拆成三段，并补一句显著性检验"></textarea>
-              </label>
-              <div class="panel-actions">
-                <button id="btn-wb-ai-send" class="btn btn-primary" type="button" data-i18n="btn.sendToAi">发给 AI 起草</button>
-                <button id="btn-wb-ai-open" class="btn" type="button" data-i18n="btn.goToAi">去 AI 起草</button>
+              <!-- AI 聊天面板：与左栏等高的窗口；历史按项目存在本地，刷新后还在。 -->
+              <div id="wb-side-ai" class="wb-side-panel" hidden>
+                <p id="wb-chat-notice" class="muted-note"></p>
+                <div id="wb-chat-log" class="wb-chat-log" role="log" aria-live="polite" aria-label="聊天记录"></div>
+                <label class="field wb-chat-field">
+                  <span class="sr-only">对这一节说点什么</span>
+                  <textarea id="wb-chat-input" rows="3" placeholder="对这一节说点什么……"></textarea>
+                </label>
+                <div class="panel-actions">
+                  <button id="wb-chat-send" class="btn btn-success" type="button" data-i18n="btn.chatSend">发送</button>
+                </div>
               </div>
             </aside>
           </div>
