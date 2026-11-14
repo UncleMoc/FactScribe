@@ -843,7 +843,12 @@ def cmd_fact_import(args) -> int:
 
     # 3. 论文项目目录
     paper_raw = getattr(args, "paper", None)
-    paper = Path(str(paper_raw)).expanduser() if paper_raw else (ws / "paper")
+    if paper_raw:
+        paper = Path(str(paper_raw)).expanduser()
+    else:
+        # 默认 <ws>/paper；没有就试 ws 本身（单项目工作区，例如内置示例）
+        candidate = ws / "paper"
+        paper = candidate if candidate.is_dir() else ws
     if not paper.is_dir():
         return _report_fail(args, command, EXIT_CONFIG, rel_report, "PAPER_MISSING",
                             "论文项目目录 %s 不存在（--paper 给对了吗）" % paper)

@@ -50,6 +50,19 @@ cites   : 2 calls, 2 keys; bib 2 entries (1 used)
 
 `audit --strict` 是 CI 形态：任何黄牌都变成非零退出码。
 
+## 走一遍报告链路（界面里的新手引导）
+
+示例还自带一份可签的报告：`reports/guide.report.toml`，数字来自
+`results/guide-summary.json`（`p95_ms = 12.5`）。
+
+1. 打开「实验报告」页，选 `guide.report.toml`，依次点「检查」「封存」「签收」
+   （签收人写你的名字）；
+2. 点「导入」：账里会多出 `facts/guide.guide-1.toml`，事实 id 是
+   `guide.guide-1.p95`；
+3. 回到正文，把 `47.3\,ms` 改成 `12.5\,ms\fact{guide.guide-1.p95}`，
+   删掉 `\cite{ghost2024}`；
+4. 重跑审计：红牌清零（黄牌仍要人判断，退出码可能是 3）。
+
 ## 复制它当起点
 
 ```bash
