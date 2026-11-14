@@ -153,13 +153,7 @@
                   <div id="wb-section-empty" class="line-empty">还没载入工作台项目。先在上面载入或连接一个论文项目。</div>
                 </div>
                 <div id="wb-preview-pane" class="wb-pane" hidden>
-                  <div class="panel-actions">
-                    <button id="btn-wb-preview-build" class="btn" type="button" data-i18n="btn.buildPreview">编译预览</button>
-                    <a id="wb-preview-open" class="link-btn" href="#" target="_blank" rel="noopener" hidden>在新标签打开 PDF</a>
-                    <span id="wb-preview-state" class="muted-note" role="status" aria-live="polite"></span>
-                  </div>
-                  <div id="wb-preview-error" class="wb-preview-error" hidden></div>
-                  <embed id="wb-preview-pdf" type="application/pdf" title="编译后的 PDF 预览" />
+                  <div id="wb-preview-html" class="wb-preview-html" aria-label="本节渲染预览"></div>
                 </div>
               </div>
             </section>
@@ -179,6 +173,13 @@
               </div>
               <!-- 问题面板：审计问题列表（含「跳到那一行」）。 -->
               <div id="wb-side-issues" class="wb-side-panel">
+                <div class="side-freeze-row">
+                  <span id="wb-evidence-meta" class="muted-note"></span>
+                  <button id="btn-wb-freeze" class="btn" type="button"
+                    title="冻结项目的证据清单（不是只冻结这一节）" data-i18n="btn.freeze">冻结证据</button>
+                  <button id="btn-wb-unfreeze" class="btn" type="button"
+                    title="解冻证据清单，改完要重新冻结" data-i18n="btn.unfreeze">解冻证据</button>
+                </div>
                 <div id="workbench-audit" class="issues-list"></div>
                 <p id="wb-meta" class="wb-meta" title="这里只显示工作台项目的结果，与论文项目不是同一份内容"
                   data-note="这里只显示工作台项目的结果，与论文项目不是同一份内容"></p>
@@ -198,15 +199,7 @@
             </aside>
           </div>
 
-          <div class="subhead" style="margin-top: 18px">
-            <h3>证据冻结 <span id="wb-evidence-meta" class="muted-note"></span></h3>
-            <p class="panel-desc">改证据清单要先解冻并写理由；冻结后改材料会在审计里报红。</p>
-          </div>
           <div id="wb-evidence" class="wb-evidence"></div>
-          <div class="panel-actions" style="margin: 8px 0">
-            <button id="btn-wb-freeze" class="btn" type="button" data-i18n="btn.freeze">冻结</button>
-            <button id="btn-wb-unfreeze" class="btn" type="button" data-i18n="btn.unfreeze">解冻</button>
-          </div>
         </section>
 
         <section id="panel-facts" class="panel panel-narrow" role="tabpanel" hidden>

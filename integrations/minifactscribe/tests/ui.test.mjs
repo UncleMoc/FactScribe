@@ -254,7 +254,7 @@ test('工作台是两栏：源码+预览 / 问题+AI 聊天；章节目录搬到
   assert.match(HTML, /id="wb-section-list"/, '侧栏应有章节目录');
   assert.match(HTML, /id="btn-wb-mode-source"/, '左栏应有源码切换');
   assert.match(HTML, /id="btn-wb-mode-preview"/, '左栏应有预览切换');
-  assert.match(HTML, /id="wb-preview-pdf"/, '左栏应有 PDF 预览位');
+  assert.match(HTML, /id="wb-preview-html"/, '左栏应有网页渲染预览位');
   assert.match(HTML, /id="wb-chat-input"/, '右栏应有聊天输入框');
   assert.match(HTML, /id="wb-chat-send"/, '右栏应有聊天发送按钮');
   assert.match(HTML, /id="workbench-section-select"/, '隐藏的下拉要留着：现有逻辑与测试都认它');
@@ -354,25 +354,21 @@ test('顶部冗余信息压缩到右栏 #wb-meta：大卡片与 panel-head 都�
   assert.match(meta, /title/, '根路径放 title 属性，不占屏');
 });
 
-test('预览走工作台接口：先编译再取 PDF，失败要把输出摊开', () => {
-  const build = JS.slice(JS.indexOf('async function buildWbPreview'),
-    JS.indexOf('/** 取 PDF 并塞进'));
-  assert.ok(build.length > 0, '应有预览编译函数');
-  assert.match(build, /wb\('\/build'\)/, '预览要先编译');
-  assert.match(build, /output_text/, '编译失败要把输出摊在预览区');
-  assert.match(build, /slice\(0, 2000\)/, '输出最多摊 2000 字');
-  const pdf = JS.slice(JS.indexOf('async function loadWbPdfBlob'),
-    JS.indexOf('/** 问题的位置能不能跳'));
-  assert.match(pdf, /wb\('\/pdf'\)/, '预览要取 PDF');
-  assert.match(HTML, /<embed id="wb-preview-pdf"[^>]*type="application\/pdf"/, '预览用 embed');
-  assert.doesNotMatch(HTML, /<iframe/, '预览不用 iframe');
+test('预览是网页渲染：把当前节转成 HTML，不编译 PDF', () => {
+  assert.match(JS, /function latexToHtml/, '应有 LaTeX→HTML 渲染器');
+  assert.match(JS, /function renderWbPreviewHtml/, '应有渲染入口');
+  assert.match(JS, /latexInline/, '行内命令要有白名单替换');
+  assert.match(HTML, /id="wb-preview-html"/, '预览是一个渲染容器');
+  assert.doesNotMatch(HTML, /id="wb-preview-pdf"/, '不再嵌 PDF');
 });
 
-test('不能编译时预览要说明为什么：启动时没加 --allow-build', () => {
-  const block = JS.slice(JS.indexOf('async function buildWbPreview'),
-    JS.indexOf('/** 取 PDF 并塞进'));
-  assert.match(block, /build_allowed === false/, '只读编译时要挡住');
-  assert.match(block, /启动时没加 --allow-build/, '要说清原因');
+test('预览不依赖 --allow-build：切换即渲染', () => {
+  const block = JS.slice(JS.indexOf('function setWbMode'),
+    JS.indexOf('function stripTexComment'));
+  assert.match(block, /renderWbMode/, '切开预览走统一渲染入口');
+  const mode = JS.slice(JS.indexOf('function renderWbMode'), JS.indexOf('function setWbMode'));
+  assert.match(mode, /renderWbPreviewHtml/, '预览模式要渲染 HTML');
+  assert.doesNotMatch(block, /build_allowed/, '不再看编译开关');
 });
 
 test('问题列表能跳到源码那一行：滚动过去并选中', () => {
@@ -1007,10 +1003,10 @@ test('Node 侧没有草稿路由：判定只来自 Python 工作台', () => {
 });
 
 
-test('预览会定位到本节页：走 wb(/section-page)，不是只看整本', () => {
-  assert.match(JS, /locateWbSectionPage/, '应有定位函数');
-  assert.match(JS, /wb\('\/section-page\?file='/, '页码走工作台接口');
-  assert.match(JS, /#page=/, 'embed 要带页码片段');
+test('预览跟着当前节走：切节/切回预览都重新渲染', () => {
+  assert.match(JS, /renderWbPreviewHtml\(\)/, '渲染入口要在');
+  const wire = JS.slice(JS.indexOf("$('#workbench-section-select').addEventListener('change'"));
+  assert.match(wire.slice(0, 800), /renderWbPreviewHtml/, '切节时预览要重画');
 });
 
 
@@ -1152,4 +1148,13 @@ test('审计跑完不再写状态行：状态行只留错误与明确动作', ()
     JS.indexOf('function wire'));
   assert.ok(block.length > 0, '应有审计函数');
   assert.match(block, /workbench-status'\)\.textContent = ''/, '跑完状态行回到空');
+});
+
+
+test('证据冻结/解冻按钮在右栏问题面板顶部', () => {
+  const issues = HTML.slice(HTML.indexOf('id="wb-side-issues"'),
+    HTML.indexOf('id="wb-side-ai"'));
+  assert.match(issues, /id="btn-wb-freeze"/, '冻结按钮在问题面板里');
+  assert.match(issues, /id="btn-wb-unfreeze"/, '解冻按钮在问题面板里');
+  assert.match(issues, /id="wb-evidence-meta"/, '证据状态也在顶部');
 });

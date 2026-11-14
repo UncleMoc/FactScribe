@@ -1017,3 +1017,10 @@ code { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monos
 
 /* 说明性小字一律不显示：界面只留操作与状态 */
 .panel-desc, .subhead .panel-desc { display: none; }
+
+/* 右栏顶部：证据冻结按钮（项目级，不是单节） */
+.side-freeze-row {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding-bottom: 6px; border-bottom: 1px solid var(--mcode-border);
+}
+.side-freeze-row .muted-note { flex: 1; min-width: 0; }
