@@ -1,4 +1,4 @@
-# SPEC-V3.0｜FactScribe / paperkit 冻结实施规范
+# SPEC-V3.0｜FactScribe / factscribe 冻结实施规范
 
 > 状态：**冻结**（第 3 轮收口）。本件是实施依据，不再迭代设计；实施中发现的缺口只能以「ATTACKS 登记 + 下一版」处理，不得在本版内改判据。
 > 替代：`docs/design/SPEC-V2.2.md`（保留为历史靶子）。V2.2 中未被本件修改的条款继续有效。
@@ -189,7 +189,7 @@ C13 输出 token：{raw, key(s), span, file/page, line, col}。
 | `target_sha256` | `approve_target` 去掉 `signature` 后的 canonical JSON | 审批准备器 |
 | `stamp_sha256` | `stamp.payload` 的 canonical JSON | 发布器 |
 
-**report schema 升为 `paperkit-report/3.0`**，新增必填字段：`tool.digest`、`tool.canon_version`、`tool.canon_sha256`、`assertions_digest`、`pdf_whitelist`、`approvals[]`、`signers[]`、`signing_mode`、`signing_boundary`。缺任一 → `REPORT_SCHEMA_INVALID`（exit 2）。
+**report schema 升为 `factscribe-report/3.0`**，新增必填字段：`tool.digest`、`tool.canon_version`、`tool.canon_sha256`、`assertions_digest`、`pdf_whitelist`、`approvals[]`、`signers[]`、`signing_mode`、`signing_boundary`。缺任一 → `REPORT_SCHEMA_INVALID`（exit 2）。
 
 ### 2.4 信任根（都在项目目录之外）
 
@@ -343,7 +343,7 @@ C13 输出 token：{raw, key(s), span, file/page, line, col}。
 | 项 | 内容 |
 |---|---|
 | 输入 | `paper.pdf` 字节；`audit/report.json`；`audit/stamp.json`；`approver_keys.json`（项目外）；可选 `nonces.ndjson` |
-| 算法 | 1) stamp schema 必须 `paperkit-stamp/3.0`；2) 用 **项目外公钥**验 ed25519 签名，签名体＝`JCS(stamp.payload)`；3) `sha256(pdf)` 必须等于 `payload.compiled.pdf_sha256`；4) `sha256(report)` 必须等于 `payload.report_sha256`；5) `report.rules_sha256 == payload.rules_sha256`、`report.assertions_digest == payload.assertions_digest`、`report.input_set_sha256 == payload.input_set_sha256`、`report.tool.digest == payload.tool_digest`；6) `report.verdict=="PASS"` 且 `report.level=="L2"`；7) PDF 元数据必须含 `paperkit-stamp:<report_sha256>` 且与报告一致（元数据只是指针，不是信任源）；8) nonce 未在账中出现过；9) `signed_at ≥ report.generated_at − 5min` 且 `≤ now + 10min` |
+| 算法 | 1) stamp schema 必须 `factscribe-stamp/3.0`；2) 用 **项目外公钥**验 ed25519 签名，签名体＝`JCS(stamp.payload)`；3) `sha256(pdf)` 必须等于 `payload.compiled.pdf_sha256`；4) `sha256(report)` 必须等于 `payload.report_sha256`；5) `report.rules_sha256 == payload.rules_sha256`、`report.assertions_digest == payload.assertions_digest`、`report.input_set_sha256 == payload.input_set_sha256`、`report.tool.digest == payload.tool_digest`；6) `report.verdict=="PASS"` 且 `report.level=="L2"`；7) PDF 元数据必须含 `factscribe-stamp:<report_sha256>` 且与报告一致（元数据只是指针，不是信任源）；8) nonce 未在账中出现过；9) `signed_at ≥ report.generated_at − 5min` 且 `≤ now + 10min` |
 | 误报/漏报 | 误报：PDF 被第三方工具重存（元数据/字节变化）→ 必然失败，这是有意的：重存即不是发布件，必须重新 release。漏报：owner key 被盗（§7-R3） |
 | 失败等级 | `STAMP_MISSING`/`STAMP_SIGNATURE_INVALID`/`STAMP_KEY_UNTRUSTED`/`STAMP_REPORT_MISMATCH`/`STAMP_METADATA_MISSING`/`STAMP_TIME_INVALID` → 红/INTEGRITY，exit 5；`STAMP_PDF_MISMATCH`/`STAMP_NONCE_REUSED` → 红/STALE，exit 7。PDF 被重存时先因字节变化命中 `STAMP_PDF_MISMATCH`（7），因此元数据缺失只在「字节未变但元数据被改」的构造里出现，统一按 5 处理 |
 | fixture | `FX-SIG-01..07`、`FX-SIG-21` |
@@ -352,7 +352,7 @@ C13 输出 token：{raw, key(s), span, file/page, line, col}。
 
 ```json
 {
-  "schema": "paperkit-stamp/3.0",
+  "schema": "factscribe-stamp/3.0",
   "report_sha256": "sha256:...",
   "rules_sha256": "sha256:...",
   "assertions_digest": "sha256:...",
@@ -471,7 +471,7 @@ C13 输出 token：{raw, key(s), span, file/page, line, col}。
 | 项 | 内容 |
 |---|---|
 | 输入 | 单条 fact 的断言集 |
-| 算法 | `paperkit ledger approve <id> --prepare` 生成 `approvals/<id>.manifest.md`，必须含：fact id、值、全部 display、claim 文本、source 路径＋sha256、run_id＋pointer、**每条断言的句子原文**（不是只给位置）、BU 指纹、角色、anchor/pair、`assertions_digest`、`input_set_sha256`、nonce、待签 target 路径。人读完后在离线环境签 `target_sha256` |
+| 算法 | `factscribe ledger approve <id> --prepare` 生成 `approvals/<id>.manifest.md`，必须含：fact id、值、全部 display、claim 文本、source 路径＋sha256、run_id＋pointer、**每条断言的句子原文**（不是只给位置）、BU 指纹、角色、anchor/pair、`assertions_digest`、`input_set_sha256`、nonce、待签 target 路径。人读完后在离线环境签 `target_sha256` |
 | 误报/漏报 | 误报：无。漏报：人没看就签；工具只能要求 manifest 存在（`APPROVAL_MANIFEST_MISSING`），不能证明人读过 |
 | 失败等级 | `APPROVAL_MANIFEST_MISSING` → 黄，exit 3（L2 升红 exit 1） |
 | fixture | `FX-SIG-22`、`FX-SIG-22b`（完整 manifest，绿） |
@@ -510,7 +510,7 @@ C13 输出 token：{raw, key(s), span, file/page, line, col}。
 
 | 项 | 内容 |
 |---|---|
-| 输入 | 配置（paperkit.toml、rules.json、symbols.json、roles.json、disclaimer_patterns.json、canon 表）；**全部运行时代码** `src/paperkit/**/*.py`（含 `cli/api/report/build/pdfgate/signatures`，不含 tests/tools）；常量（`ESCALATE_AT_L2`、表 A、`SAFE`、`CANON_VERSION`、全部阈值） |
+| 输入 | 配置（factscribe.toml、rules.json、symbols.json、roles.json、disclaimer_patterns.json、canon 表）；**全部运行时代码** `src/factscribe/**/*.py`（含 `cli/api/report/build/pdfgate/signatures`，不含 tests/tools）；常量（`ESCALATE_AT_L2`、表 A、`SAFE`、`CANON_VERSION`、全部阈值） |
 | 算法 | 1) 构建器计算 `rules_sha256 = sha256(JCS(清单))`；2) 生成 `release.json`（version、rules_sha256、artifact sha256、build_id），用**发布私钥**（项目外）签名；3) 工具启动时重算自身模块哈希，与 `release.json` 比；不符 → `TOOL_MODIFIED`；4) 无 `release.json` → `TOOL_UNATTESTED`（黄；release 路径拒绝） |
 | 误报/漏报 | 误报：开发版无签名 → 只在 release 拒绝。漏报：攻击者同时改代码、改嵌入式哈希、并用发布私钥重签 → 需要发布私钥，超出本工具边界（§7-R3） |
 | 失败等级 | `TOOL_MODIFIED` → 红/CONFIG，exit 2；`TOOL_UNATTESTED` → 黄，exit 3；release 下 `RELEASE_TOOL_UNATTESTED` → 红/INTEGRITY，exit 5 |
@@ -590,10 +590,10 @@ xfail = { owner = "moc", reason = "迁移期", expires = "2026-12-31" }  # 可�
 |---|---|
 | 定义 | **12 个 hostile 项目**（`BT-01..BT-12`），由人、或一个**只读本规范、未读 RED-3、未看实现与夹具**的模型独立构造；不告知实现者内容；每个项目是一个可运行的 `/tmp` 项目（源＋facts＋可选 runs＋目标 PDF/产物） |
 | 冻结时机 | 实现冻结（`rules_sha256` 与 `tool_digest` 锁定）之后生成；运行前只公开每个项目的 id 与期望族，不公开构造 |
-| 存放 | 仓外目录 `$PAPERKIT_HOLDOUT`；仓内只放 `HOLDOUT.lock`（每个项目的 sha256＋期望 code 的 hash）。永不入公开仓、永不贴 CI 日志；只公布聚合分数 |
+| 存放 | 仓外目录 `$FACTSCRIBE_HOLDOUT`；仓内只放 `HOLDOUT.lock`（每个项目的 sha256＋期望 code 的 hash）。永不入公开仓、永不贴 CI 日志；只公布聚合分数 |
 | 通过线 | **总命中率 ≥ 80%（≥10/12）**，且关键族 `PDF_RASTER`、`PDF_TEXT_EVASION`、`STAMP_FORGERY`、`ASSERTION_MOVE` **每族至少 1 个命中**。低于 → 闸门不可用，回炉；旧盲测集降级为公开回归，下一轮重新生成新集 |
-| 命令 | `python3 tools/blind.py --holdout "$PAPERKIT_HOLDOUT" --report holdout-report.json`；退出 0 才算通过 |
-| 防泄漏 | 盲测项目哈希进 `HOLDOUT.lock`；实现者提交前不得读 `$PAPERKIT_HOLDOUT`；CI 只上传聚合 JSON |
+| 命令 | `python3 tools/blind.py --holdout "$FACTSCRIBE_HOLDOUT" --report holdout-report.json`；退出 0 才算通过 |
+| 防泄漏 | 盲测项目哈希进 `HOLDOUT.lock`；实现者提交前不得读 `$FACTSCRIBE_HOLDOUT`；CI 只上传聚合 JSON |
 
 **12 个盲测项目的族分配（只给族，不给构造）**：
 
@@ -702,18 +702,18 @@ python3 tools/coverage_matrix.py --allow-gaps   # A 阶段允许缺口，但必�
 
 | 文件 | 职责 | 只依赖 |
 |---|---|---|
-| `src/paperkit/models.py` | `Fact/Issue/BU/Token/Approval/Stamp` 数据类；无逻辑 | stdlib |
-| `src/paperkit/quantkey.py` | `CANON v3`、token 识别、等价类、key 派生 | models |
-| `src/paperkit/texscan.py` | 全局流、掩码、BU 切分、邻接判据、source map | models, quantkey |
-| `src/paperkit/closure.py` | 闭包、`\input` 家族、包装宏、root 钉定 | models, texscan |
-| `src/paperkit/ledger.py` | schema 2.2/3.0、append-only、display、setting、批准账 | models, quantkey |
-| `src/paperkit/signatures.py` | JCS、ed25519 验签、key 登记链、nonce 账 | models, stdlib |
-| `src/paperkit/rules/*.py` | 每条规则一个文件；规则之间**零 import**；`__init__.py` 的 `RULES` 表 | models, quantkey |
-| `src/paperkit/report.py` | 报告装配、inputs、digests、banner | models |
-| `src/paperkit/pdfgate.py` | poppler 封装、逐页文本、图片面积、双向多重集 | models, quantkey |
-| `src/paperkit/build.py` | release、stamp、编译范围、元数据写入 | report, signatures, pdfgate |
-| `src/paperkit/api.py` | `audit/check/release/verify-pdf` 编排 | rules, ledger, report, pdfgate, build |
-| `src/paperkit/cli.py` | argv、退出码、人类/JSON 输出 | api, models |
+| `src/factscribe/models.py` | `Fact/Issue/BU/Token/Approval/Stamp` 数据类；无逻辑 | stdlib |
+| `src/factscribe/quantkey.py` | `CANON v3`、token 识别、等价类、key 派生 | models |
+| `src/factscribe/texscan.py` | 全局流、掩码、BU 切分、邻接判据、source map | models, quantkey |
+| `src/factscribe/closure.py` | 闭包、`\input` 家族、包装宏、root 钉定 | models, texscan |
+| `src/factscribe/ledger.py` | schema 2.2/3.0、append-only、display、setting、批准账 | models, quantkey |
+| `src/factscribe/signatures.py` | JCS、ed25519 验签、key 登记链、nonce 账 | models, stdlib |
+| `src/factscribe/rules/*.py` | 每条规则一个文件；规则之间**零 import**；`__init__.py` 的 `RULES` 表 | models, quantkey |
+| `src/factscribe/report.py` | 报告装配、inputs、digests、banner | models |
+| `src/factscribe/pdfgate.py` | poppler 封装、逐页文本、图片面积、双向多重集 | models, quantkey |
+| `src/factscribe/build.py` | release、stamp、编译范围、元数据写入 | report, signatures, pdfgate |
+| `src/factscribe/api.py` | `audit/check/release/verify-pdf` 编排 | rules, ledger, report, pdfgate, build |
+| `src/factscribe/cli.py` | argv、退出码、人类/JSON 输出 | api, models |
 | `tools/bundle.py` | 按拓扑序拼回单文件 `factscribe.py` | stdlib |
 
 **依赖方向（单向，禁止回指）**：
@@ -764,11 +764,11 @@ python3 tools/coverage_matrix.py --fail-on-gap
 python3 tools/benign_probe.py --corpus paper+mutants --max-fp 0.02
 python3 tools/golden.py --verify tests/golden/v1
 python3 factscribe.py audit --level l2 --gate "$PK_TMP"
-python3 factscribe.py release "$PK_TMP" --keys ~/.config/paperkit/approver_keys.json
+python3 factscribe.py release "$PK_TMP" --keys ~/.config/factscribe/approver_keys.json
 python3 factscribe.py verify-pdf "$PK_TMP/main.pdf" \
   --report "$PK_TMP/audit/report.json" --stamp "$PK_TMP/audit/stamp.json" \
-  --keys ~/.config/paperkit/approver_keys.json
-python3 tools/blind.py --holdout "$PAPERKIT_HOLDOUT" --report holdout-report.json
+  --keys ~/.config/factscribe/approver_keys.json
+python3 tools/blind.py --holdout "$FACTSCRIBE_HOLDOUT" --report holdout-report.json
 python3 tools/spec_lint.py --no-construction
 ```
 
@@ -836,7 +836,7 @@ python3 tools/spec_lint.py --no-construction
 | ⟡ COMPUTED_VALUE_UNREGISTERED | 现场计算生成且未登记的数字 | `\frac/\dfrac/\tfrac/\numexpr/\dimexpr/\inteval` 产生 token；`\frac` 未在该行的 `frac_allow` 登记 | red | 1 | P-06／§2.1 |
 | ⟡ NUMBER_AS_CROSSREF | 把手写结构编号当数据 | `Table/Figure/Section/Eq./Algorithm/Appendix` 等后跟字面数字，且没有 `\ref` 稳定标识 | yellow | 3 | P-05 W4／§11.2 |
 | ⟡ EVIDENCE_CHAIN_BROKEN | 证据链断节 | `source`／运行记录／`source_sha256`／`record.json`／回执 `facts[]` 任一节缺失或不符（更具体码优先） | red | 1 | §11.6 |
-| FACT_SCHEMA_INVALID | facts 文件 schema 不认识 | `schema` 不是 `paperkit-fact/3.x` 或 `factscribe-fact/3.x`；大小写敏感 | red | 2 | §11.1 |
+| FACT_SCHEMA_INVALID | facts 文件 schema 不认识 | `schema` 不是 `factscribe-fact/3.x` 或 `factscribe-fact/3.x`；大小写敏感 | red | 2 | §11.1 |
 | FACT_CONTAINER_INVALID | facts 容器形态错 | `fact` 不是 `[[fact]]` 表数组，或条目不是表 | red | 2 | §11.1 |
 | FACT_ID_MISSING | fact 缺 id | 条目录入时没有非空 `id` | red | 2 | §11.1 |
 | BAD_ID_FORMAT | fact id 格式不合法 | `id` 不匹配 `^[A-Za-z0-9._-]+$`（v3） | red | 1 | §11.1 |
@@ -894,7 +894,7 @@ python3 tools/spec_lint.py --no-construction
 | STAMP_KEY_UNTRUSTED | stamp key 不可信 | key 文件位于项目内或未登记 | red | 5 | P-08 |
 | STAMP_REPORT_MISMATCH | stamp 与 report 不符 | report/rules/assertions/inputs/tool 摘要不符 | red | 5 | P-08 |
 | STAMP_PDF_MISMATCH | stamp 与 PDF 字节不符 | `sha256(pdf)` ≠ `payload.compiled.pdf_sha256` | red | 7 | P-08 |
-| STAMP_METADATA_MISSING | PDF 元数据指针缺失 | 缺 `paperkit-stamp:<report_sha256>` | red | 5 | P-08 |
+| STAMP_METADATA_MISSING | PDF 元数据指针缺失 | 缺 `factscribe-stamp:<report_sha256>` | red | 5 | P-08 |
 | STAMP_NONCE_REUSED | stamp nonce 重放 | nonce 已在账本 | red | 7 | S-04 |
 | STAMP_TIME_INVALID | stamp 时间窗不符 | `signed_at` 越出规定窗口 | red | 7 | S-04 |
 | PDF_TOOL_MISSING | 缺 PDF 工具链 | `pdftotext/pdfinfo/pdfimages` 不可用 | red | 2 | P-01 |
@@ -957,7 +957,7 @@ python3 tools/spec_lint.py --no-construction
 | MANIFEST_NO_TIMESTAMP | 清单无时间戳 | 缺 `signed_at` | red | 1 | R-14 |
 | RESOLVE_DEGRADED | 联网核验大面积失败 | unverified 占比 > 50% 且条目 ≥ 3 | yellow | 3 | R-11 |
 | SOURCE_NOT_SIGNED | source 未签 | source 不在人签清单里 | red | 1 | R-14 |
-| PKIGNORE_QUANT | \pkignore 内出现定量 | 被豁免文本里含数字 | red | 1 | R-07 |
+| FSIGNORE_QUANT | \fsignore 内出现定量 | 被豁免文本里含数字 | red | 1 | R-07 |
 
 **§8.1 注·`UNSCANNED_TEX` 的「有东西可扫」口径（批 135）**：闭包外的
 `.tex` 不是一律报黄，只报**确有可审计内容**的。判定：去掉注释、去掉
@@ -1025,7 +1025,7 @@ python3 tools/spec_lint.py --no-construction
 | TABLE_BARE_LITERAL | 表格裸字面量 | 未绑定 | red | 5 | R-06（2-S4） |
 | FIGURE_UNBOUND | 图未声明/sidecar 缺失 | 图无绑定 | red | 5 | R-06 |
 | FIGURE_UNVERIFIED | 图未核验 | 仅声明 | 见 §8.1 | 见 §8.1 | R-06 |
-| PKIGNORE_QUANT | \pkignore 内出现定量 | 豁免区藏数 | 见 §8.1 | 见 §8.1 | R-07 |
+| FSIGNORE_QUANT | \fsignore 内出现定量 | 豁免区藏数 | 见 §8.1 | 见 §8.1 | R-07 |
 | EXEMPTION_MACRO_SUSPECT | 豁免宏可疑 | 宏可执行 | red | 1 | R-07 |
 | IGNORE_NOT_TRACKED | 忽略项未跟踪 | 缺台账 | yellow | 3 | R-07 |
 | TODO_IN_PDF | PDF 含 TODO | 未完成标记 | red | 1 | R-08 |
@@ -1160,7 +1160,7 @@ python3 tools/spec_lint.py --no-construction
 
 ### 10.1 唯一规范形态
 
-项目声明文件名固定为 `factscribe.toml`（兼容旧名 `paperkit.toml`，同解析）。
+项目声明文件名固定为 `factscribe.toml`（兼容旧名 `factscribe.toml`，同解析）。
 规范形态＝**一张 `[project]` 表**：
 
 ```toml
@@ -1201,9 +1201,9 @@ number_locale = "dot"
 
 | 规范名 | 允许的别名/写法 | 归一化结果 |
 |---|---|---|
-| 顶层 `schema` | `paperkit-project/3.x`、`factscribe/3.x` | 视为同一套 v3 声明 |
-| fact 文件 `schema` | `paperkit-fact/3.x`、`factscribe-fact/3.x` | 同上 |
-| （无 schema） | `[project]` + `root_tex`／`[project]` + `sections` | 隐式 v3，schema 补为 `paperkit-project/3.0` |
+| 顶层 `schema` | `factscribe-project/3.x`、`factscribe/3.x` | 视为同一套 v3 声明 |
+| fact 文件 `schema` | `factscribe-fact/3.x`、`factscribe-fact/3.x` | 同上 |
+| （无 schema） | `[project]` + `root_tex`／`[project]` + `sections` | 隐式 v3，schema 补为 `factscribe-project/3.0` |
 | `root_tex` | 与 `sections` 二选一；两者都给时 `root_tex` 优先 | `sections` 置空并记 `CONFIG_ALIAS` 告警 |
 | `sections` | 数组或单个字符串 | 数组→显式清单；单字符串→单文件 |
 | `bib` | `refs` | 同值 |
@@ -1272,7 +1272,7 @@ number_locale = "dot"
 ### 11.1 facts 文件形态（写死）
 
 - 文件名/位置：`project.facts` 指定（缺省 `facts`＝`facts/*.toml`）。
-- `schema` 头可选，允许 `paperkit-fact/3.x` 与 `factscribe-fact/3.x`；
+- `schema` 头可选，允许 `factscribe-fact/3.x` 与 `factscribe-fact/3.x`；
   其它 `schema` → `FACT_SCHEMA_INVALID`（CONFIG，exit 2）。
 - 账体是 **`[[fact]]` 表数组**（一个文件可以有多条）。没有 `fact` 键时，
   允许「一文件一条、顶层扁平」的兼容形态（v3 下要求出现 `id` 或 `value`）。
@@ -1282,7 +1282,7 @@ number_locale = "dot"
 **唯一规范形态（可直接复制）**：
 
 ```toml
-schema = "paperkit-fact/3.0"   # 可选；不写也按 v3 读（配 §10 的 [project]）
+schema = "factscribe-fact/3.0"   # 可选；不写也按 v3 读（配 §10 的 [project]）
 
 [[fact]]
 id = "A2"                    # 必需，唯一，[A-Za-z0-9._-]
@@ -1400,7 +1400,7 @@ number_locale = "period"
 `facts/facts.toml`：
 
 ```toml
-schema = "paperkit-fact/3.0"
+schema = "factscribe-fact/3.0"
 
 [[fact]]
 id = "A1"
@@ -1723,7 +1723,7 @@ python3 -m factscribe protect --before <目录A> --after <目录B> [--json] [--a
 ```
 
 两个目录各自递归收集 `*.tex`（跳过隐藏目录与隐藏文件），按相对路径配对比较。
-不做配置加载：保护面是独立旁路，不要求项目里有 `paperkit.toml`。
+不做配置加载：保护面是独立旁路，不要求项目里有 `factscribe.toml`。
 
 ### 14.2 保护面（硬，变了即红）
 
@@ -1770,7 +1770,7 @@ python3 -m factscribe protect --before <目录A> --after <目录B> [--json] [--a
 
 - 只改标点、断句、换行、空格、同义措辞 → 全绿（公式内容哈希去空白，数字按
   `number_key` 归一）。
-- 注释、verbatim、`\pkignore`/`\todo` 等批注宏里的内容不参与保护面。
+- 注释、verbatim、`\fsignore`/`\todo` 等批注宏里的内容不参与保护面。
 - 表格只读 `tabular` 家族；`booktabs` 的横线命令不产生单元格。
 - 数字保护面会把表格 cell、公式里被 `audit` 抽到的数字一并计入；这是
   「多报不漏报」的保守方向，确属改写噪声时用 `--allow-renames` 只降标题，
@@ -1800,7 +1800,7 @@ python3 -m factscribe protect --before <目录A> --after <目录B> [--json] [--a
 - **首句**＝标题结束后第一个非空句子。标题若没有自己的正文（下一节标题先出现），
   本节不判 `HEADING_ECHO`；行内 `\paragraph` 与首句同在一行时仍算本节正文。
 - **改写前目录**：`style <after> --diff <before>`。`before` 必须是可加载的
-  paperkit 项目（含 `paperkit.toml`），相对路径按当前工作目录解析；缺失或坏配置
+  factscribe 项目（含 `factscribe.toml`），相对路径按当前工作目录解析；缺失或坏配置
   → `CONFIG_INVALID`（exit 2）。
 - 每条 finding 固定六字段：`code / severity / file / line / text / suggestion`；
   severity 恒为 `yellow`。
@@ -1924,7 +1924,7 @@ python3 -m factscribe protect --before <目录A> --after <目录B> [--json] [--a
 ## 附录 B｜本机可复现的最小验收（实施后）
 
 ```bash
-cd paperkit-dev
+cd factscribe-dev
 PK_TMP="$(mktemp -d)/pk-paper"; cp -R paper "$PK_TMP"   # paper/ 只读，写只发生在副本
 python3 -m unittest discover -s tests -v
 python3 tools/fixture_lint.py --strict
@@ -1932,11 +1932,11 @@ python3 tools/coverage_matrix.py --fail-on-gap
 python3 tools/benign_probe.py --corpus paper+mutants --max-fp 0.02
 python3 tools/golden.py --verify tests/golden/v1
 python3 factscribe.py audit --level l2 --gate "$PK_TMP"
-python3 factscribe.py release "$PK_TMP" --keys "$HOME/.config/paperkit/approver_keys.json"
+python3 factscribe.py release "$PK_TMP" --keys "$HOME/.config/factscribe/approver_keys.json"
 python3 factscribe.py verify-pdf "$PK_TMP/main.pdf" \
   --report "$PK_TMP/audit/report.json" --stamp "$PK_TMP/audit/stamp.json" \
-  --keys "$HOME/.config/paperkit/approver_keys.json"
-python3 tools/blind.py --holdout "$PAPERKIT_HOLDOUT" --report holdout-report.json
+  --keys "$HOME/.config/factscribe/approver_keys.json"
+python3 tools/blind.py --holdout "$FACTSCRIBE_HOLDOUT" --report holdout-report.json
 python3 tools/spec_lint.py --no-construction
 ```
 

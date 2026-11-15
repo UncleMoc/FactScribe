@@ -1,6 +1,6 @@
 # A. 主结果：SWE-bench Verified 子集（DeepSeek V4.1 Flash）
 # 来源 FACTS.md §A；原始产物 experiments/ctx-compiler-redblue/BATCH23-SWB16.md
-# source 相对 paperkit.toml 的 project.source_root（工作区根）解析，原始产物留在 experiments/ 原地，
+# source 相对 factscribe.toml 的 project.source_root（工作区根）解析，原始产物留在 experiments/ 原地，
 # 不再复制进 paper/results/；sha256 仍逐条钉住（批 36 D3）。
 
 [[fact]]

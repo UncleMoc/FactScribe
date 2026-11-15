@@ -25,7 +25,7 @@
 |---|---|
 | 模板用 `__TITLE__` 等占位符 + `str.replace`，不用 `str.format`/f-string | LaTeX 模板里全是 `{}`，格式化会把 `\fact{ID}` 吃成 KeyError |
 | `write_bytes(text.encode("utf-8"))` | 固定 LF、无 BOM；逐字节可比对 |
-| 标题/作者进 `.tex` 前过 `tex_escape` | 作者名里 `&`、`%`、`_` 不会把 `main.tex` 搞坏；`paperkit.toml` 用 `toml_string` 原样保留 |
+| 标题/作者进 `.tex` 前过 `tex_escape` | 作者名里 `&`、`%`、`_` 不会把 `main.tex` 搞坏；`factscribe.toml` 用 `toml_string` 原样保留 |
 | `--locator` 设为可选 | 验收命令（SPEC 第四节）不带它；强制会让真跑 exit 2。空 locator 不影响 `check` 判据，但 SPEC 与 README 都建议填 |
 | `--source` 额外校验「必须在 `results/` 下」 | 只查「项目内存在」会把 `check` 必红的账写进去（`SOURCE_OUTSIDE_RESULTS`）；配了 `source_root` 时按 `audit.source_base` 同口径放行 |
 | id 判重走 `load_facts` 的 `id_key` | 与 `check` 的 `DUPLICATE_ID`（大小写不敏感）同口径，不在 CLI 里另造一套 |
@@ -35,14 +35,14 @@
 
 ## 3. 验收（真跑，macOS / Python 3.14.4）
 
-命令与输出逐字如下（仓根 `paperkit-dev/` 执行，`PYTHONPATH=src`）：
+命令与输出逐字如下（仓根 `factscribe-dev/` 执行，`PYTHONPATH=src`）：
 
 ### 3.1 `init`
 
 ```text
 $ python3 -m factscribe init /tmp/newpaper --title "Demo" --author "张三"
 已生成最小项目：/tmp/newpaper（lang=zh，7 个文件）
-  paperkit.toml
+  factscribe.toml
   main.tex
   sections/01-intro.tex
   facts/01-core.toml
@@ -74,7 +74,7 @@ $ python3 -m factscribe fact add /tmp/newpaper --id A1 --claim "示例" \
 
 ```text
 $ python3 -m factscribe check /tmp/newpaper
-== paperkit check ==
+== factscribe check ==
 project : /tmp/newpaper
 facts   : 1 条（id 1 个，source 均在位 1 条，sha 钉住 1 条）
 

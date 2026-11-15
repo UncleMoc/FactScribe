@@ -54,7 +54,7 @@ python3 -m factscribe style --doc README.md    # 单篇文风体检
 | `audit` | 核心校验：内联绑定、数字回账、引用落稳定标识、覆盖报告 |
 | `matrix` | 生成追溯矩阵 `audit/matrix.md` |
 | `build` | 编译 PDF；没有配置构建命令时自动用 tectonic，中文缺字体自动兜底 |
-| `preamble` | 生成 `audit/preamble.tex` 里的 `\fact` 与 `\pkignore` 宏 |
+| `preamble` | 生成 `audit/preamble.tex` 里的 `\fact` 与 `\fsignore` 宏 |
 | `verify-pdf` | PDF 回检：文本层、栅格页、双向多重集、stamp 验签 |
 | `style` | 文风闸：公式化写法报黄；证据缺钉报红 |
 | `protect` | 改写保护面：比对改写前后六类不许变的内容 |
@@ -116,7 +116,7 @@ python3 -m factscribe protect --before 旧稿/ --after 新稿/
 ## 复现与贡献
 
 ```bash
-python3 -m unittest discover -s tests     # 1356 例，全离线
+python3 -m unittest discover -s tests     # 1357 例，全离线
 ./scripts/preflight-ci.sh                 # 本地等价 CI：干净克隆 + 3.10/3.11/3.12
 ```
 

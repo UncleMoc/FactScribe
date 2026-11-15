@@ -34,10 +34,10 @@ python3 -m factscribe terms add --from candidates.tsv --pick <表面形式>[,<�
 
 ## 2. 语料范围
 
-1. 目录里有 `paperkit.toml`：按该项目的 `sections` 配置 ＋ `\input/\include`
+1. 目录里有 `factscribe.toml`：按该项目的 `sections` 配置 ＋ `\input/\include`
    闭包取文件（复用 `config.load_config` / `load_sections`），即「会被编译
    进正文的源文件」。
-2. 没有 `paperkit.toml`：递归扫描 `.tex` / `.md` / `.markdown` / `.txt`；
+2. 没有 `factscribe.toml`：递归扫描 `.tex` / `.md` / `.markdown` / `.txt`；
    跳过隐藏目录与 `audit`、`figures`、`results`、`tables`、`build`、`dist`、
    `node_modules`、`__pycache__`、`.venv`。
 3. 文件路径排序后处理，保证结果与文件系统枚举顺序无关。

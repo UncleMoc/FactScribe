@@ -12,8 +12,8 @@
 
 | 项 | 口径 |
 |---|---|
-| 有 `paperkit.toml` | 按 `sections` 配置＋`\input` 闭包取正文（复用 `load_config` / `load_sections`） |
-| 无 `paperkit.toml` | 递归扫 `.tex` / `.md` / `.markdown` / `.txt`，跳过隐藏目录与 `audit`、`figures`、`results`、`tables` 等生成/结构化目录 |
+| 有 `factscribe.toml` | 按 `sections` 配置＋`\input` 闭包取正文（复用 `load_config` / `load_sections`） |
+| 无 `factscribe.toml` | 递归扫 `.tex` / `.md` / `.markdown` / `.txt`，跳过隐藏目录与 `audit`、`figures`、`results`、`tables` 等生成/结构化目录 |
 | 遮罩 | 复用 `style._source_view`：TeX 走 `prose_of`，Markdown 走 `mdscan.scan_markdown`；注释、代码块、行内代码、数学、表格、链接目标先抹成等长空白 |
 | 噪音遮罩 | 再抹一层 `\ref{}` / `\cite{}` / `\label{}` / `\fact{}` / `\input{}` 等命令参数，以及模型名形态（`Flash`、`Pro`、`MiniMax-M3.1-Flash`、`DeepSeek V4.1 Flash`、版本串 `V4.1`）；Markdown 里的 LaTeX 片段同样生效 |
 | 小节 | 标题分隔区间（LaTeX：`\section`/`\subsection`/`\subsubsection`/`\paragraph`；Markdown：`#`–`######`）；首个标题前算第 0 节；无标题整篇算一节 |

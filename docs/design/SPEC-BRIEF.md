@@ -36,7 +36,7 @@ python3 -m factscribe brief <项目目录> [--section <前缀>] [--out <文件>]
 
 | 参数 | 必填 | 语义 |
 |---|---|---|
-| `project` | 否 | 项目目录，默认当前目录；必须有 `paperkit.toml` 与至少一条 fact |
+| `project` | 否 | 项目目录，默认当前目录；必须有 `factscribe.toml` 与至少一条 fact |
 | `--section` | 否 | 只出某一节的简报：按节文件名词干前缀匹配（例 `04`）；给空串或匹配不到任何节即用法错（exit 2） |
 | `--out` | 否 | 把 Markdown 写到文件（目录不存在则创建）；给了就不同时往 stdout 写正文 |
 | `--json` | 否 | stdout 只出 JSON；与 `--out` 可同时使用 |
@@ -60,12 +60,12 @@ python3 -m factscribe brief <项目目录> [--section <前缀>] [--out <文件>]
 
 ### 3.1 写作任务
 
-- 项目名（取 `paperkit.toml` 的 `name`，没有则 `title`；不打印路径）；
+- 项目名（取 `factscribe.toml` 的 `name`，没有则 `title`；不打印路径）；
 - 主文件（`root_tex`；没有 `root_tex` 时为 `main.tex`；再没有则说明按文件名排序）；
 - 节清单：按主文件 `\input` / `\include` 的**出现顺序**；主文件不存在时按
   `sections/*.tex` 的**文件名排序**；
 - 每节给三项：相对文件名、当前标题、**该节已有事实条数**；
-- 批 128 起再加一列「篇幅预算」：值来自 `paperkit.toml` 的 `[budget]`
+- 批 128 起再加一列「篇幅预算」：值来自 `factscribe.toml` 的 `[budget]`
   （`default` 或 `[budget.sections]` 的按节覆盖，见 `SPEC-BUDGET.md`）；
   没有 `[budget]` 或该节没有可用预算时写 `—`。
 
@@ -146,7 +146,7 @@ python3 -m factscribe review --before <改前目录> --after <改后目录>
 
 | 情形 | 退出码 | 说明 |
 |---|---|---|
-| `paperkit.toml` 缺失/坏 | 2 | 既有 `ConfigError` |
+| `factscribe.toml` 缺失/坏 | 2 | 既有 `ConfigError` |
 | 一条 fact 都没有 | 2 | 「facts 为空……简报无从生成」 |
 | 一个节文件都没有 | 2 | 「sections 为空……没有可写的节」 |
 | `--section` 空串或匹配不到节 | 2 | 点名给的前缀 |

@@ -1,7 +1,7 @@
 # 篇幅预算实施记录（批 128）
 
 > 规范：`docs/design/SPEC-BUDGET.md`。
-> 新增 `paperkit.toml` 可选节 `[budget]`、`style` 黄牌判据 `SECTION_LENGTH`、
+> 新增 `factscribe.toml` 可选节 `[budget]`、`style` 黄牌判据 `SECTION_LENGTH`、
 > 处方第 10 条 `trim-to-budget`、`polish --plan` 映射、`brief` 篇幅预算列；
 > **未改**任何既有判据的取值与退出码；零第三方依赖（纯标准库）。
 
@@ -76,7 +76,7 @@
 
 ```bash
 cp -R ../paper-b /tmp/budget-probe
-# 在 /tmp/budget-probe/paperkit.toml 追加：[budget] default = 800
+# 在 /tmp/budget-probe/factscribe.toml 追加：[budget] default = 800
 python3 -m factscribe style /tmp/budget-probe --json
 python3 -m factscribe polish --plan /tmp/budget-probe
 python3 -m factscribe brief /tmp/budget-probe

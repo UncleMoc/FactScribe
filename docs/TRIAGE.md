@@ -10,7 +10,7 @@
 
 | 错误码 | 它在说什么 | 怎么修 |
 |---|---|---|
-| `UNMATCHED_NUMBER` | 这个数字谁都对不上：行内没绑定，也不在任何 fact 的值域里 | 先回 `results/` 找到它的出处 → `fact add` → 数字后加 `\fact{ID}`；确实不是数据（年份、章节号、页码）用 `\pkignore{...}` 显式豁免 |
+| `UNMATCHED_NUMBER` | 这个数字谁都对不上：行内没绑定，也不在任何 fact 的值域里 | 先回 `results/` 找到它的出处 → `fact add` → 数字后加 `\fact{ID}`；确实不是数据（年份、章节号、页码）用 `\fsignore{...}` 显式豁免 |
 | `BOUND_MISMATCH` | 这行绑了 `A1`，但这个数字不在 `A1` 的值域里 | 绑定写错了，或账里的 `value` 过时了；先核对账 |
 | `MISSING_CITE` | `\cite` 的 key 在 `refs.bib` 里不存在 | 补 bib 条目，或删掉这条引用 |
 | `BIB_NO_STABLE_ID` | bib 条目没有 `doi` / `arxiv`（`@misc` 要 `url`） | 补稳定标识；查不到的文献不要引 |

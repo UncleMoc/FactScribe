@@ -73,7 +73,7 @@
 
 ## 2. 验收读数（真材料）
 
-2026-11-10 在 `paperkit-dev/` 运行，四条命令与读数：
+2026-11-10 在 `factscribe-dev/` 运行，四条命令与读数：
 
 ```text
 $ python3 -m factscribe style /tmp/e2e2/zh --diff ../paper-b-zh --json

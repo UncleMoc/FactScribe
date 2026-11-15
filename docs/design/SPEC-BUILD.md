@@ -1,6 +1,6 @@
 # SPEC-BUILD — `factscribe build` 自动编译 PDF
 
-批 120。动机：V3 项目声明（`paperkit-project/3.x`）不读 `[project].build`，
+批 120。动机：V3 项目声明（`factscribe-project/3.x`）不读 `[project].build`，
 `factscribe build` 因此永远走「跳过编译」分支，PDF 停在旧字节上。实测后果：
 `factscribe audit` 把旧 PDF 与当前账本对多重集，报出一串
 `PDF_UNACCOUNTED_NUMBER`（exit 5），而工具没有任何一句话提示「PDF 该重编了」。

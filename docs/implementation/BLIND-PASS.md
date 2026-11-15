@@ -19,7 +19,7 @@
 复现命令：
 
 ```bash
-cd /Users/moc/workspaces/SiAgent/paperkit-dev
+cd /Users/moc/workspaces/SiAgent/factscribe-dev
 python3 /tmp/blind_eval.py | tail -8
 python3 -m unittest discover -s tests | tail -2
 ```
@@ -28,7 +28,7 @@ python3 -m unittest discover -s tests | tail -2
 
 | # | 判据（SPEC-V3.0） | 实现位置 | 判据要点 |
 |---|---|---|---|
-| 1 | 项目声明 schema 别名 | `factscribe/config.py`：`V3_PROJECT_SCHEMA_PREFIXES`、`is_v3_project_schema()` | `paperkit-project/3.x` 与 `factscribe/3.x` 两个冻结字面量都认；未知版本仍 exit 2 |
+| 1 | 项目声明 schema 别名 | `factscribe/config.py`：`V3_PROJECT_SCHEMA_PREFIXES`、`is_v3_project_schema()` | `factscribe-project/3.x` 与 `factscribe/3.x` 两个冻结字面量都认；未知版本仍 exit 2 |
 | 2 | 混合声明布局 | `config.py`：`_v3_get()` / `_load_v3_config()` | 顶层字段与 `[project]` 表都读（`root_tex/facts/refs` 在顶层、`signing_mode/number_locale/...` 在表里） |
 | 3 | `facts` 目录写法、`refs` 别名 | `config.py`：`_v3_facts_glob()`、`_load_v3_config()` | `facts = "facts"` 归一成 `facts/*.toml`；`refs = "refs.bib"` 认作 bib |
 | 4 | `number_locale` 同义值 | `config.py`：`NUMBER_LOCALE_ALIASES` | `dot/point` 归一到 `period`，`comma` 保留 |
@@ -87,8 +87,8 @@ python3 -m unittest discover -s tests | tail -2
 |---|---|---|---|---|---|
 | one-way-containment | hostile | 5/5 | `PDF_LEDGER_TOKEN_MISSING` | 同 | **命中** |
 | one-way-containment | benign | 0/0 | — | — | **干净** |
-| pkignore-wrap | hostile | 5/5 | `PDF_UNACCOUNTED_NUMBER` | 同（另有 `PKIGNORE_QUANT`） | **命中** |
-| pkignore-wrap | benign | 0/0 | — | — | **干净** |
+| fsignore-wrap | hostile | 5/5 | `PDF_UNACCOUNTED_NUMBER` | 同（另有 `FSIGNORE_QUANT`） | **命中** |
+| fsignore-wrap | benign | 0/0 | — | — | **干净** |
 | sentence-split | hostile | 1/1 | `ASSERTION_DRIFT` | 同（另有 `BOUND_MISMATCH`） | **命中** |
 | sentence-split | benign | 0/0 | — | — | **干净** |
 | table-tunnel | hostile | 5/5 | `PDF_UNACCOUNTED_NUMBER` | 同 | **命中** |

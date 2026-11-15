@@ -6,9 +6,9 @@
 
 ## 修的是什么
 
-`evidence --suggest <项目>` 的产物设计目标是**可直接粘进 `paperkit.toml`**。
+`evidence --suggest <项目>` 的产物设计目标是**可直接粘进 `factscribe.toml`**。
 一旦 stdout 里混进人类摘要（「扫描 N 节……」），重定向得到的文件就不是
-合法 TOML：`cat >> paperkit.toml` 之后所有读配置的命令都 exit 2。
+合法 TOML：`cat >> factscribe.toml` 之后所有读配置的命令都 exit 2。
 
 契约（现在由测试锁住）：
 
@@ -24,13 +24,13 @@
 
 ## 验收实录
 
-命令均在 `paperkit-dev/` 下以当前工作区代码运行（`../paper-b` 为真实项目）。
+命令均在 `factscribe-dev/` 下以当前工作区代码运行（`../paper-b` 为真实项目）。
 
 | # | 命令 | 读数 |
 |---|---|---|
 | 1 | `python3 -m factscribe evidence --suggest ../paper-b > /tmp/x.toml 2>/tmp/x.err` | exit 0；`/tmp/x.err` 一行「扫描 10 节，7 节有 fact 引用，共 103 条 id（未冻结）」 |
 | 2 | `python3 -c "import tomllib;print(len(tomllib.load(open('/tmp/x.toml','rb'))['evidence']))"` | `7` |
-| 3 | `cp -R ../paper-b /tmp/ev3 && cat /tmp/x.toml >> /tmp/ev3/paperkit.toml && python3 -m factscribe evidence --freeze /tmp/ev3` | exit 0，`entries` 103，`canonical_sha256` `036da978…` |
+| 3 | `cp -R ../paper-b /tmp/ev3 && cat /tmp/x.toml >> /tmp/ev3/factscribe.toml && python3 -m factscribe evidence --freeze /tmp/ev3` | exit 0，`entries` 103，`canonical_sha256` `036da978…` |
 
 失败形态（批 134 报告里的现象）：摘要若在 stdout 第一行，第 2 步的
 `tomllib` 直接抛 `TOMLDecodeError`，第 3 步 exit 2。回归测试

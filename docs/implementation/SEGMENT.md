@@ -95,7 +95,7 @@ load(path=None) -> dict[str, tuple[int, str]]
 | `../paper-b` | 5,983 | 0 | 0.00 | 1 |
 | `../paper-b-zh` | 9,592 | 0 | 0.00 | 1 |
 
-复算命令（仓根 `paperkit-dev/`）：
+复算命令（仓根 `factscribe-dev/`）：
 
 ```bash
 python3 -m factscribe style ../paper --json

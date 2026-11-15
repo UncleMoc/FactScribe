@@ -1,7 +1,7 @@
 # SPEC-EVIDENCE-STAMP｜证据钢印：人钉清单、机器执行（批 131；批 132/133 追加）
 
 状态：批 131 冻结（实施依据）；批 132 追加清单冻结，批 133 追加解冻—重冻。
-范围：`paperkit.toml` 新增可选节 `[evidence]`；`style` 新增两条**红**判据
+范围：`factscribe.toml` 新增可选节 `[evidence]`；`style` 新增两条**红**判据
 `REQUIRED_EVIDENCE_MISSING` / `EVIDENCE_DROPPED`；`review` 把两条判据算进
 拒绝面；`brief` 节清单加「必须引用的事实」列；`NUMERAL_DENSITY` 默认阈值
 改为 `null`（不判，实现与配置保留）。
@@ -145,7 +145,7 @@
 
 - 扫描各节正文，按 `\fact{id}` 的出现顺序去重，列出**该节实际引用了哪些
   fact id**；
-- 输出一段可直接粘进 `paperkit.toml` 的 `[evidence]` TOML 块（非 `--json`
+- 输出一段可直接粘进 `factscribe.toml` 的 `[evidence]` TOML 块（非 `--json`
   时 stdout **只有这段 TOML**，方便重定向）；
 - 只做「现状快照」：不判断该不该引、不补全、不排序正文引用顺序之外的东西；
 - 确定性：同一份正文两次输出逐字节一致；节键按名字排序，节内 id 按首次

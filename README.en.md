@@ -47,7 +47,7 @@ Adopting an existing paper? Read [`docs/ADOPT.md`](docs/ADOPT.md) first: it is a
 | `audit` | Core check: inline binding, number-to-ledger, citation stability, coverage report |
 | `matrix` | Writes the traceability matrix to `audit/matrix.md` |
 | `build` | Compiles the PDF; falls back to tectonic, with a CJK font fallback |
-| `preamble` | Generates the `\fact` and `\pkignore` macros in `audit/preamble.tex` |
+| `preamble` | Generates the `\fact` and `\fsignore` macros in `audit/preamble.tex` |
 | `verify-pdf` | PDF check: text layer, raster pages, bidirectional multiset, stamp signature |
 | `style` | Prose gate: formulaic writing in yellow; missing stamped evidence in red |
 | `protect` | Rewrite protection: six classes of content that must not change |
@@ -111,7 +111,7 @@ All three limits point at the same promise. The tool keeps ledger, evidence, and
 ## Reproduce and contribute
 
 ```bash
-python3 -m unittest discover -s tests     # 1356 tests, fully offline
+python3 -m unittest discover -s tests     # 1357 tests, fully offline
 ./scripts/preflight-ci.sh                 # local CI: clean clone + 3.10/3.11/3.12
 ```
 

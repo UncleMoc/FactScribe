@@ -21,11 +21,11 @@
 
 ## 验收实录（`../paper-b` 副本，删 main.pdf 以隔离 PDF_STALE）
 
-命令均在 `paperkit-dev/` 下以 `env PYTHONPATH=src python3 -m factscribe ...` 运行。
+命令均在 `factscribe-dev/` 下以 `env PYTHONPATH=src python3 -m factscribe ...` 运行。
 
 | # | 步骤 | 退出码 | 关键输出 |
 |---|---|---|---|
-| 1 | `evidence --suggest <副本>` | 0 | 7 节、103 条 id，TOML 粘进 `paperkit.toml` |
+| 1 | `evidence --suggest <副本>` | 0 | 7 节、103 条 id，TOML 粘进 `factscribe.toml` |
 | 2 | `evidence --freeze --reason "初始清单"` | 0 | sha256 `036da978…`，entries 103 |
 | 3 | 未解冻改一条 id（`00_abstract`: B1→B2）→ `audit` | 1 | `EVIDENCE_SET_CHANGED` 红，指出 B1 从 `00_abstract` 移走 |
 | 4 | `evidence --unfreeze --reason "补 B9，因新增段落" --at 2026-11-11` | 0 | log 追加 `{"action":"unfreeze",...,"hash_before":"036da978950abf48","at":"2026-11-11"}` |

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""FactScribe（原 paperkit）—— 论文数字与引用的机械闸门。
+"""FactScribe—— 论文数字与引用的机械闸门。
 
 包结构拆分后，本 `__init__` 把各子模块的名字原样再导出，保证
 ``import factscribe`` 与拆分前的单文件模块具有同一属性面（含下划线私有

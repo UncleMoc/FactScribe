@@ -80,7 +80,7 @@
 
 ## 4. 前后告警数（`--diff`）
 
-命令（在 `paperkit-dev/` 下）：
+命令（在 `factscribe-dev/` 下）：
 
 ```bash
 python3 -m factscribe style /tmp/v4-regen/en --diff ../paper --json

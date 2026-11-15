@@ -62,7 +62,7 @@ $ python3 -m factscribe fonts --status
 
 ```
 $ python3 -m factscribe build ../paper-zh
-== paperkit build ==
+== factscribe build ==
 引擎：/opt/homebrew/bin/tectonic
 尝试：2 次
 产出：../paper-zh/main.pdf（17 页，458688 字节）

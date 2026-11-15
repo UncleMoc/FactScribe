@@ -46,7 +46,7 @@ python3 -m factscribe init <项目> --force
 **3. 清理占位文件。** 删掉 init 生成的 `main.tex` 和 `sections/01-intro.tex`——你的论文有自己的主文件，
 留着它们会被当成正文扫进去。
 
-**4. 改 `paperkit.toml`。**
+**4. 改 `factscribe.toml`。**
 
 ```toml
 [project]
@@ -75,9 +75,9 @@ manifest = "results/MANIFEST.toml"
 
 一篇实验论文的多数数字在表里（LoRA 实测 1011 格）。工具要求表格满足三者之一：
 
-1. **生成式**（推荐）：表头写 `% paperkit:generated spec=tables/t1.spec.json`，审计用同一渲染器
+1. **生成式**（推荐）：表头写 `% factscribe:generated spec=tables/t1.spec.json`，审计用同一渲染器
    从账重算每格；
-2. **映射式**：`% paperkit:table-map {"12":{"on":"A2"}}`（行号 → 列 → fact）；
+2. **映射式**：`% factscribe:table-map {"12":{"on":"A2"}}`（行号 → 列 → fact）；
 3. **内联式**：单元格写 `91.4\fact{A2}`。
 
 没有映射就是 `TABLE_UNBOUND`。逐格手写不现实，**能迁的前提是表格能从账重新生成**。

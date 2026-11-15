@@ -1,10 +1,10 @@
-# paperkit v1.1 实现记录（三处落地摩擦）
+# factscribe v1.1 实现记录（三处落地摩擦）
 
-日期：2026-11-07　　实现者：paperkit contributors
+日期：2026-11-07　　实现者：factscribe contributors
 基线：`9d255bd`（v1.0.0，87 例）　　本批：v1.1.0，93 例
 
 本批不改闸门口径（红/黄/绑定的判定逻辑原样保留），只修「工具让写作变难」的三处
-落地摩擦。三处都落在 `paperkit.py` 与 `tests/test_paperkit.py`。
+落地摩擦。三处都落在 `factscribe.py` 与 `tests/test_factscribe.py`。
 
 ---
 
@@ -16,15 +16,15 @@
 
 **改法**
 
-- 新增 `_ANNOTATION_CMDS = (todoq, todo, pkignore, pknote, fixme, note, tbd)`；
+- 新增 `_ANNOTATION_CMDS = (todoq, todo, fsignore, pknote, fixme, note, tbd)`；
   `_mask_envs_and_verb` 在剥注释之前把它们**连同可选参数与必选参数**整块抹成空白
   （保留行列号）。`\todo[inline,color=...]{...}` 的可选参数一并吞掉。
 - 跳过必须可见：`ScanResult.annotations` 记录 `(宏名, 行号)`；
   `run_audit` 汇总为 `summary.annotations_skipped` 与 `summary.annotation_sites`；
   人读输出新增一行
-  `notes : 已跳过 N 处批注（\todoq/\todo/\pkignore 等，内容不参与审计）`。
+  `notes : 已跳过 N 处批注（\todoq/\todo/\fsignore 等，内容不参与审计）`。
 - 注释行里的批注不计入（先判该行 `%` 之前没有宏调用），避免把注释掉的 todo 算成跳过。
-- 行内 `\pkignore{...}` 的旧行为不变（照排、不进审计），只是现在也计入「已跳过」。
+- 行内 `\fsignore{...}` 的旧行为不变（照排、不进审计），只是现在也计入「已跳过」。
 
 **边界**：跳过 ≠ 放行。批注外的同一数字照旧判红（负例测试钉死）。
 
@@ -55,7 +55,7 @@ G4（507 秒，最慢 2220）因 source 里写作 `131s` / `2220s` 而报黄 `VA
 
 **改法**
 
-- `paperkit.toml` 的 `[project]` 新增可选 `source_root`（默认空＝v1 旧口径）：
+- `factscribe.toml` 的 `[project]` 新增可选 `source_root`（默认空＝v1 旧口径）：
   `source` 相对 `source_root` 解析，sha256 与人签清单照旧逐条校验。
 - 新函数 `source_base(cfg)` / `source_path(cfg, f)`；`verify_sources` 与 `check` 的
   `sources_ok` 统计都走它。
@@ -65,7 +65,7 @@ G4（507 秒，最慢 2220）因 source 里写作 `131s` / `2220s` 而报黄 `VA
 - `results/` 未签文件扫描保持原样（项目内产物区照旧点名）；清单 `[files]` 的键
   ＝facts 里的 `source` 串（例如 `experiments/demo/...`）。
 
-**论文项目落地**：真实论文项目在 `paperkit.toml` 里把 `source_root` 指向工作区根
+**论文项目落地**：真实论文项目在 `factscribe.toml` 里把 `source_root` 指向工作区根
 （例如 `/abs/workspace`），facts 的 48 条 `source` 写成相对它的产物路径；
 `results/` 下的产物副本删除，`results/MANIFEST.toml` 按新键重算 sha256
 （值与 facts 里已钉的一致）。复制不再必要。
@@ -86,9 +86,9 @@ G4（507 秒，最慢 2220）因 source 里写作 `131s` / `2220s` 而报黄 `VA
 
 | 命令 | 结果 |
 |---|---|
-| `python3 paperkit.py check ../paper` | 0 红 / 1 黄（D1,H1 的 `LEDGER_CONFLICT`，刻意保留的双口径）→ 退出码 3 |
-| `python3 paperkit.py audit ../paper` | 0 红 / 8 黄（全部 `UNSCANNED_TEX`：appendix、tables、main.tex 不在 `sections/*.tex` 闭包）→ 退出码 3；`numbers 0 个`、`已跳过 17 处批注` |
-| `python3 paperkit.py build ../paper` | 成功，退出码 0，出 `paper/main.pdf`（26.9 KiB） |
+| `python3 factscribe.py check ../paper` | 0 红 / 1 黄（D1,H1 的 `LEDGER_CONFLICT`，刻意保留的双口径）→ 退出码 3 |
+| `python3 factscribe.py audit ../paper` | 0 红 / 8 黄（全部 `UNSCANNED_TEX`：appendix、tables、main.tex 不在 `sections/*.tex` 闭包）→ 退出码 3；`numbers 0 个`、`已跳过 17 处批注` |
+| `python3 factscribe.py build ../paper` | 成功，退出码 0，出 `paper/main.pdf`（26.9 KiB） |
 | `python3 -m unittest discover -s tests` | **93 例全绿**（原 87 + 新增 6） |
 
 audit 的 8 条黄可解释：正文目前只有批注骨架，appendix/tables 不在审计闭包里（工具

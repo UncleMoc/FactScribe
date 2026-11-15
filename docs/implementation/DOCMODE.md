@@ -121,19 +121,19 @@ HEADING_TOO_LONG    1   <=12字/8词  触发
 链接文字、HTML 注释、表格行、front matter、标题解析与尾部 `#`、围栏内
 假标题、纯文本、格式判定；端到端覆盖示例的标题与零代码误报、精确行号、
 正文破折号、链接文字、表格、front matter、段落不跨围栏、无
-`paperkit.toml`、多文件/重复 `--doc`、`.markdown` 扩展名、用法错
+`factscribe.toml`、多文件/重复 `--doc`、`.markdown` 扩展名、用法错
 （`--doc` + 项目目录、文件不存在）；`.tex` 回归锁对 `examples/minimal`
 锁定 metrics、findings、summary 与退出码。
 
 ## 7. 验收：README 两条输出（原样）
 
-### `python3 -m factscribe style --doc ../paperkit-dev/README.md`
+### `python3 -m factscribe style --doc ../factscribe-dev/README.md`
 
 ```text
 == factscribe style ==
-project : /Users/moc/workspaces/SiAgent/paperkit-dev
+project : /Users/moc/workspaces/SiAgent/factscribe-dev
 正文    : 1 个文件，634 词/字，39 句，18 段
-规则    : /Users/moc/workspaces/SiAgent/paperkit-dev/style-rules.toml
+规则    : /Users/moc/workspaces/SiAgent/factscribe-dev/style-rules.toml
 阶段    : polished（建议不改，triggers=2，cv=0.53）
 判断    : 仅 2 项指标触发（RHYTHM_PLATEAU、TERM_FIRST_IN_HEADING），句长 CV=0.53 在健康区间 [0.45, 0.80]：稿子已到打磨阶段，建议不改。
 
@@ -161,25 +161,25 @@ HEDGE_STACK              0         1        ok
 REPEATED_OPENER          0         2        ok
 
 [观察] 7 处清单（成品稿：建议不改，以下只作报告）
-  1. TERM_FIRST_IN_HEADING  ../paperkit-dev/README.md:12
+  1. TERM_FIRST_IN_HEADING  ../factscribe-dev/README.md:12
      原文：装与跑
      改法：标题里的「装与跑」第一次出现时，请在该节首句用一句话定义或点明它是什么（例：预注册是在收集数据前固定假设与分析计划的做法）；复述标题、垫话（如「相关工作里，」）与设问都不算定义。可在 term-allow.txt 登记白名单，只改措辞，不改事实。
-  2. TERM_FIRST_IN_HEADING  ../paperkit-dev/README.md:20
+  2. TERM_FIRST_IN_HEADING  ../factscribe-dev/README.md:20
      原文：六个命令
      改法：标题里的「六个命令」第一次出现时，请在该节首句用一句话定义或点明它是什么（例：预注册是在收集数据前固定假设与分析计划的做法）；复述标题、垫话（如「相关工作里，」）与设问都不算定义。可在 term-allow.txt 登记白名单，只改措辞，不改事实。
-  3. TERM_FIRST_IN_HEADING  ../paperkit-dev/README.md:64
+  3. TERM_FIRST_IN_HEADING  ../factscribe-dev/README.md:64
      原文：数字回账
      改法：标题里的「数字回账」第一次出现时，请在该节首句用一句话定义或点明它是什么（例：预注册是在收集数据前固定假设与分析计划的做法）；复述标题、垫话（如「相关工作里，」）与设问都不算定义。可在 term-allow.txt 登记白名单，只改措辞，不改事实。
-  4. TERM_FIRST_IN_HEADING  ../paperkit-dev/README.md:83
+  4. TERM_FIRST_IN_HEADING  ../factscribe-dev/README.md:83
      原文：黄牌规则
      改法：标题里的「黄牌规则」第一次出现时，请在该节首句用一句话定义或点明它是什么（例：预注册是在收集数据前固定假设与分析计划的做法）；复述标题、垫话（如「相关工作里，」）与设问都不算定义。可在 term-allow.txt 登记白名单，只改措辞，不改事实。
-  5. TERM_FIRST_IN_HEADING  ../paperkit-dev/README.md:97
+  5. TERM_FIRST_IN_HEADING  ../factscribe-dev/README.md:97
      原文：已知缺口
      改法：标题里的「已知缺口」第一次出现时，请在该节首句用一句话定义或点明它是什么（例：预注册是在收集数据前固定假设与分析计划的做法）；复述标题、垫话（如「相关工作里，」）与设问都不算定义。可在 term-allow.txt 登记白名单，只改措辞，不改事实。
-  6. TERM_FIRST_IN_HEADING  ../paperkit-dev/README.md:107
+  6. TERM_FIRST_IN_HEADING  ../factscribe-dev/README.md:107
      原文：复现与贡献
      改法：标题里的「复现与贡献」第一次出现时，请在该节首句用一句话定义或点明它是什么（例：预注册是在收集数据前固定假设与分析计划的做法）；复述标题、垫话（如「相关工作里，」）与设问都不算定义。可在 term-allow.txt 登记白名单，只改措辞，不改事实。
-  7. RHYTHM_PLATEAU         ../paperkit-dev/README.md:88
+  7. RHYTHM_PLATEAU         ../factscribe-dev/README.md:88
      原文：- 与 ：缺人签清单，或有未签产物； - ：事实里的数字没在源文件里出现； - 与 ：账本自相矛盾，或同值多 claim；
      改法：第 88–91 行连续 3 句长度都在 10–19 字：节奏成了平台，在其中插入一句 8–15 字的短句，或把相邻两句合并，让长短有起伏；内容与结构不动
 
@@ -187,13 +187,13 @@ REPEATED_OPENER          0         2        ok
 文档模式：1 个文件（markdown）
 ```
 
-### `python3 -m factscribe style --doc ../paperkit-dev/README.en.md`
+### `python3 -m factscribe style --doc ../factscribe-dev/README.en.md`
 
 ```text
 == factscribe style ==
-project : /Users/moc/workspaces/SiAgent/paperkit-dev
+project : /Users/moc/workspaces/SiAgent/factscribe-dev
 正文    : 1 个文件，393 词/字，40 句，16 段
-规则    : /Users/moc/workspaces/SiAgent/paperkit-dev/style-rules.toml
+规则    : /Users/moc/workspaces/SiAgent/factscribe-dev/style-rules.toml
 阶段    : polished（建议不改，triggers=2，cv=0.62）
 判断    : 仅 2 项指标触发（RHYTHM_PLATEAU、TERM_FIRST_IN_HEADING），句长 CV=0.62 在健康区间 [0.45, 0.80]：稿子已到打磨阶段，建议不改。
 
@@ -221,25 +221,25 @@ HEDGE_STACK              0         1        ok
 REPEATED_OPENER          0         2        ok
 
 [观察] 7 处清单（成品稿：建议不改，以下只作报告）
-  1. TERM_FIRST_IN_HEADING  ../paperkit-dev/README.en.md:20
+  1. TERM_FIRST_IN_HEADING  ../factscribe-dev/README.en.md:20
      原文：Six commands
      改法：标题里的「Six commands」第一次出现时，请在该节首句用一句话定义或点明它是什么（例：预注册是在收集数据前固定假设与分析计划的做法）；复述标题、垫话（如「相关工作里，」）与设问都不算定义。可在 term-allow.txt 登记白名单，只改措辞，不改事实。
-  2. TERM_FIRST_IN_HEADING  ../paperkit-dev/README.en.md:84
+  2. TERM_FIRST_IN_HEADING  ../factscribe-dev/README.en.md:84
      原文：Yellow rules
      改法：标题里的「Yellow rules」第一次出现时，请在该节首句用一句话定义或点明它是什么（例：预注册是在收集数据前固定假设与分析计划的做法）；复述标题、垫话（如「相关工作里，」）与设问都不算定义。可在 term-allow.txt 登记白名单，只改措辞，不改事实。
-  3. TERM_FIRST_IN_HEADING  ../paperkit-dev/README.en.md:97
+  3. TERM_FIRST_IN_HEADING  ../factscribe-dev/README.en.md:97
      原文：Known gaps
      改法：标题里的「Known gaps」第一次出现时，请在该节首句用一句话定义或点明它是什么（例：预注册是在收集数据前固定假设与分析计划的做法）；复述标题、垫话（如「相关工作里，」）与设问都不算定义。可在 term-allow.txt 登记白名单，只改措辞，不改事实。
-  4. RHYTHM_PLATEAU         ../paperkit-dev/README.en.md:80
+  4. RHYTHM_PLATEAU         ../factscribe-dev/README.en.md:80
      原文：Every family key must exist in , otherwise red . Each bib entry needs or ; entries may use .
      改法：第 80–82 行连续 3 句长度都在 0–9 词：节奏成了平台，在其中插入一句 8–15 词的短句，或把相邻两句合并，让长短有起伏；内容与结构不动
-  5. RHYTHM_PLATEAU         ../paperkit-dev/README.en.md:88
+  5. RHYTHM_PLATEAU         ../factscribe-dev/README.en.md:88
      原文：- : traceable but unbound; - and : no signed manifest, or unsigned artifacts; - : a ledger number absent from its source file; - and : self-contradicting ledge…
      改法：第 88–94 行连续 6 句长度都在 0–9 词：节奏成了平台，在其中插入一句 8–15 词的短句，或把相邻两句合并，让长短有起伏；内容与结构不动
-  6. RHYTHM_PLATEAU         ../paperkit-dev/README.en.md:102
+  6. RHYTHM_PLATEAU         ../factscribe-dev/README.en.md:102
      原文：- derived facts whose expression disagrees with the stored value; - dynamic targets; - diagnostic-only error codes.
      改法：第 102–105 行连续 3 句长度都在 0–9 词：节奏成了平台，在其中插入一句 8–15 词的短句，或把相邻两句合并，让长短有起伏；内容与结构不动
-  7. RHYTHM_PLATEAU         ../paperkit-dev/README.en.md:117
+  7. RHYTHM_PLATEAU         ../factscribe-dev/README.en.md:117
      原文：Specs live in , implementation notes in , history in . Read before opening a pull request. Tests are required.
      改法：第 117–119 行连续 3 句长度都在 0–9 词：节奏成了平台，在其中插入一句 8–15 词的短句，或把相邻两句合并，让长短有起伏；内容与结构不动
 

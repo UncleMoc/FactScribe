@@ -122,7 +122,7 @@ $ ./scripts/preflight-ci.sh
 `ignored` 列表、生效规则在 `ignore`）。`ignored` 只列「两棵树之间真有差异」的被忽略文件，
 两棵树完全相同的产物不会占用这个数。
 
-**验收（`paperkit-dev/` 下跑）**：
+**验收（`factscribe-dev/` 下跑）**：
 
 ```text
 $ python3 -m factscribe tide --before ../paper --after /tmp/v4-regen/en
@@ -289,7 +289,7 @@ $ ./scripts/preflight-ci.sh --fast
 （`snapshot_saved=true`、`snapshot_id` 等）；不闭合时 `snapshot_saved=false`、
 `snapshot=null`，库目录不新增。
 
-**验收（`paperkit-dev/` 下跑）**：
+**验收（`factscribe-dev/` 下跑）**：
 
 ```text
 $ cp -R ../paper-b /tmp/tidesnap2

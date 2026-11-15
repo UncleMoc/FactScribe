@@ -1,10 +1,10 @@
-# Contributing to paperkit
+# Contributing to factscribe
 
-Thanks for looking. paperkit is a small, deliberately boring tool: one
+Thanks for looking. factscribe is a small, deliberately boring tool: one
 stdlib-only Python file, offline tests, no plugins, no services. Most
 contributions are "one more gate" or "one more lexical edge case".
 
-**Read `docs/design/SPEC-V1.md` §2.3 first.** paperkit's honesty is its product: it checks
+**Read `docs/design/SPEC-V1.md` §2.3 first.** factscribe's honesty is its product: it checks
 that the bookkeeping is consistent (`book -> evidence -> text`), not that the
 science is true. Never make a change that lets the tool report green when it
 does not know something.
@@ -17,9 +17,9 @@ does not know something.
 |---|---|
 | **Standard library only.** No new dependencies, ever (dev-time too). | Users can copy the `factscribe/` package into a paper repo and run it. `pip install` must never be required. |
 | **Tests are offline.** No network, no `--resolve` in tests (mock the degrade branch instead). | CI runs with no network; a flaky test is worse than no test. |
-| **The exit-code contract is frozen.** `0` green / `1` red / `2` config / `3` yellow / `4` internal. | People wire paperkit into CI. Changing a code silently breaks their pipelines. |
+| **The exit-code contract is frozen.** `0` green / `1` red / `2` config / `3` yellow / `4` internal. | People wire factscribe into CI. Changing a code silently breaks their pipelines. |
 | **Fail closed.** Unknown `*cite*` command, unreadable source, missing manifest => report, never skip. | A silent skip is a false green. |
-| **No silent passes.** Missing `paperkit.toml`, empty facts/sections, missing bib => exit `2` with a reason. | |
+| **No silent passes.** Missing `factscribe.toml`, empty facts/sections, missing bib => exit `2` with a reason. | |
 
 Python `>= 3.10`. Keep `factscribe/` a stdlib-only package; it is imported by
 the tests and packaged via `packages = ["factscribe"]` (see `pyproject.toml`).
@@ -47,7 +47,7 @@ the tests and packaged via `packages = ["factscribe"]` (see `pyproject.toml`).
 ## 3. Set up and run
 
 ```bash
-git clone <repo> && cd paperkit
+git clone <repo> && cd factscribe-dev
 python3 -m unittest discover -s tests -v     # 93 cases, all offline, ~5 s
 ```
 
@@ -183,7 +183,7 @@ After: annotations are masked; audit lists annotation_sites in --json.
 
 ## 8. License
 
-paperkit is published under the license in `LICENSE` (currently a placeholder
+factscribe is published under the license in `LICENSE` (currently a placeholder
 pending the owner's decision — do not rely on it yet). By contributing you agree
 your work is released under that license.
 

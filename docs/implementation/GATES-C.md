@@ -16,7 +16,7 @@
 | `factscribe/facts.py` | 值域去掉隐式舍入（B2）；新增 `canon_text` / `decimal_places`；`Fact.display/co_claim` |
 | `factscribe/config.py` | `display` 解析、`numeric_macro_allow`、`\input` 包装宏展开（B1） |
 | `factscribe/texscan.py` | 句级 BU（`sentence_spans`）、标记组（`marker_groups`）、分数单元合并、邻接层 `adjacency`、批注参数记录 |
-| `factscribe/texrules.py`（新） | ARITH / NUMERIC_IN_MACRO / PKIGNORE_QUANT / 邻接判据 / 表格区域 / display 校验的「找证据」层 |
+| `factscribe/texrules.py`（新） | ARITH / NUMERIC_IN_MACRO / FSIGNORE_QUANT / 邻接判据 / 表格区域 / display 校验的「找证据」层 |
 | `factscribe/audit.py` | 装 Issue、按 BU 归属、表格通道、退出层级聚合 |
 | `factscribe/pdfgate.py`（新） | `verify-pdf`：P-02..P-05、P-08/S-01、纯 stdlib ed25519 验签 |
 | `factscribe/cli.py` | `verify-pdf` 子命令；audit/check 用分层退出码 |
@@ -57,19 +57,19 @@
   且数字 key 回不到账的数字报 `TABLE_UNBOUND`（COVERAGE，exit 5）。表格里能回账但未绑定的数字
   仍按 `UNBOUND_NUMBER` 黄（保持 `examples/minimal` 的既有读数）。
 - **边界**：只展开「纯 `\input` 包装」；带条件/循环/拼接的宏仍可能绕开，进 §7-R1 的人工复核。
-  表格内的 `\pkignore` 整块走 R-06 通道，不按 `PKIGNORE_QUANT` 重复判红（回归线 5 张表靠这条）。
+  表格内的 `\fsignore` 整块走 R-06 通道，不按 `FSIGNORE_QUANT` 重复判红（回归线 5 张表靠这条）。
 - **夹具**：`hostile/R1-B1`（exit 5、`TABLE_UNBOUND`）、`benign/R1-B1`（普通 `\input` 表格绿）。
 - **测试**：夹具 2 + `test_gates_c.TableClosureTest` 2。
 
-### 1.4 R1-B4｜`\pkignore` 参数（`PKIGNORE_QUANT`，exit 1）
+### 1.4 R1-B4｜`\fsignore` 参数（`FSIGNORE_QUANT`，exit 1）
 
-- **实现**：`texscan` 记录批注宏参数原文；`texrules.pkignore_quant_hits` 先掩 URL 与
+- **实现**：`texscan` 记录批注宏参数原文；`texrules.fsignore_quant_hits` 先掩 URL 与
   带连字符的标识符（`sphinx-10449`、`GPT-4`），再抽 QUANT；命中即红，并继续计入
   `annotations_skipped`（跳过不等于放行）。
-- **边界**：包裹 `table/tabular/longtable` 的 `\pkignore` 走表格通道；`\pknote`/`\fixnote`
+- **边界**：包裹 `table/tabular/longtable` 的 `\fsignore` 走表格通道；`\pknote`/`\fixnote`
   不是豁免宏，但当前只计批注、不扫数字（R-08 的 TODO 渲染检查尚未实现，登记为边界）。
 - **夹具**：`hostile/R1-B4`（99/100 → 红）、`benign/R1-B4`（`sphinx-10449` → 绿）。
-- **测试**：夹具 2 + `test_gates_c.PkignoreTest` 2。
+- **测试**：夹具 2 + `test_gates_c.FsignoreTest` 2。
 
 ### 1.5 R2-MACRO｜宏体数字（`NUMERIC_IN_MACRO`，exit 1）
 
@@ -132,19 +132,19 @@
   `pdf > ledger + pdf_whitelist` → `PDF_UNACCOUNTED_NUMBER`。白名单缺 `key/count/source`
   → `PDF_WHITELIST_UNPROVENANCED`；声明了但 PDF 未出现 → 黄 `PDF_WHITELIST_UNUSED`。
 - **边界**：`\frac` 上下排版、表格跨行断字可能造成误报（当前最小语料未触发）；
-  白名单是**人签声明**，不放宽相等判定。PDF 元数据指针（`paperkit-stamp:`）未校验。
+  白名单是**人签声明**，不放宽相等判定。PDF 元数据指针（`factscribe-stamp:`）未校验。
 - **夹具**：`hostile/R3-PDF-ONEWAY`（缺 `5/16` → 红）、`benign/R3-PDF-ONEWAY`（多重集相等 → 0）。
 - **测试**：夹具 2 + `test_gates_c.PdfGateTest.test_one_way_inclusion_is_red`。
 
 ### 1.11 R3-STAMP-SELFSIGN｜stamp 信任根（`STAMP_KEY_UNTRUSTED`，exit 5）
 
 - **实现**：`pdfgate._stamp_issues` 顺序：公钥文件 `resolve()` 后位于 PDF 所在项目根内
-  → `STAMP_KEY_UNTRUSTED`（立即退出）；`payload.schema=paperkit-stamp/3.0`；
+  → `STAMP_KEY_UNTRUSTED`（立即退出）；`payload.schema=factscribe-stamp/3.0`；
   登记表查 `signer_key_id`；纯 stdlib ed25519 验证 `JCS(payload)`；PDF 字节 sha
   → `STAMP_PDF_MISMATCH`（7）；报告指纹（去掉 `report_sha256` 自身后的 JCS）
   → `STAMP_REPORT_MISMATCH`（5）；`rules/assertions/input_set/tool_digest` 一致性；
   `verdict==PASS && level==L2`；`signed_at` 时间窗（以系统时钟与 `generated_at` 的较大者为基准）。
-- **边界**：PDF 元数据里的 `paperkit-stamp:` 指针、nonce 重放账、key 权限位、
+- **边界**：PDF 元数据里的 `factscribe-stamp:` 指针、nonce 重放账、key 权限位、
   登记链（`registered_by`）尚未实现（`STAMP_NONCE_REUSED` / `STAMP_METADATA_MISSING` /
   `KEY_PERMISSION_UNSAFE` 未覆盖）；私钥在 agent 可达范围外是部署事实，工具不承诺（S-02/S-10）。
 - **夹具**：`hostile/R3-STAMP-SELFSIGN`（项目内 `keys/` → 红 5）、

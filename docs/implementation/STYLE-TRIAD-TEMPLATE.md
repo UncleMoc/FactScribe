@@ -27,7 +27,7 @@
 - 序数标记要求后跟分隔符（`第一，`、`第二：`），避免把「第一台机器」这类
   记数当成模板。
 
-## 3. 读数（`paperkit-dev/` 下跑）
+## 3. 读数（`factscribe-dev/` 下跑）
 
 ```text
 $ python3 -m factscribe style ../paper --json        COLLOQUIAL_TRIAD 0（findings 0）

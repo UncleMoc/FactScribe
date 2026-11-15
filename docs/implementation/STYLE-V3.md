@@ -109,7 +109,7 @@
 
 ## 3. 修正后的真实基线
 
-命令（仓根 `paperkit-dev/`）：
+命令（仓根 `factscribe-dev/`）：
 
 ```bash
 env PYTHONPATH=. python3 -m factscribe style ../paper --json
@@ -165,7 +165,7 @@ env PYTHONPATH=. python3 -m factscribe style ../paper-zh --json
 ## 4. 验证与复现
 
 ```bash
-cd paperkit-dev
+cd factscribe-dev
 env PYTHONPATH=. python3 -m unittest discover -s tests        # 256 例全绿
 env PYTHONPATH=. python3 -m factscribe style ../paper         # polished / 建议不改
 env PYTHONPATH=. python3 -m factscribe style ../paper --prompt

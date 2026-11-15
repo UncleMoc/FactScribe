@@ -1,17 +1,17 @@
-# paperkit MVP 实现记录
+# factscribe MVP 实现记录
 
 > **v1 见 `IMPLEMENTATION-V1.md`。** 本件是 v0/MVP 的历史记录，
 > 其中「值级匹配」「46 例」「source 只验存在」等口径已被 v1 取代。
 
-日期：2026-11-07　　实现者：paperkit contributors
+日期：2026-11-07　　实现者：factscribe contributors
 规格：`SPEC.md`（v0）；本件只记「做了什么、跑了什么、哪里还不行」。
 
 ## 0. 交付清单
 
 ```
-paperkit-dev/
-  paperkit.py               # 单文件 CLI，纯标准库（~1000 行）
-  tests/test_paperkit.py    # 46 例 unittest，全离线
+factscribe-dev/
+  factscribe.py               # 单文件 CLI，纯标准库（~1000 行）
+  tests/test_factscribe.py    # 46 例 unittest，全离线
   examples/minimal/         # SPEC §6 验收样例（3 facts + 2 节 tex + 1 编造数字 + 1 假引用）
   README.md
   IMPLEMENTATION.md
@@ -23,14 +23,14 @@ paperkit-dev/
 ## 1. 命令示例
 
 ```bash
-cd paperkit-dev
+cd factscribe-dev
 
-python3 paperkit.py check  examples/minimal          # 账本身
-python3 paperkit.py audit  examples/minimal          # 核心闸门
-python3 paperkit.py audit  examples/minimal --json   # 给 agent
-python3 paperkit.py audit  examples/minimal --resolve # 再联网核 arXiv/DOI（可选）
-python3 paperkit.py matrix examples/minimal          # 写 audit/matrix.md
-python3 paperkit.py build  examples/minimal          # 跑 project.build
+python3 factscribe.py check  examples/minimal          # 账本身
+python3 factscribe.py audit  examples/minimal          # 核心闸门
+python3 factscribe.py audit  examples/minimal --json   # 给 agent
+python3 factscribe.py audit  examples/minimal --resolve # 再联网核 arXiv/DOI（可选）
+python3 factscribe.py matrix examples/minimal          # 写 audit/matrix.md
+python3 factscribe.py build  examples/minimal          # 跑 project.build
 ```
 
 退出码：`0` 无红 / `1` 有红（或 build 失败）/ `2` 配置或用法错。
@@ -40,7 +40,7 @@ python3 paperkit.py build  examples/minimal          # 跑 project.build
 ### 2.1 `check` —— 绿，退出码 0
 
 ```
-== paperkit check ==
+== factscribe check ==
 project : examples/minimal
 facts   : 3 条（id 3 个，source 均在位 3 条）
 
@@ -54,7 +54,7 @@ facts   : 3 条（id 3 个，source 均在位 3 条）
 ### 2.2 `audit` —— **恰好 2 处红**，退出码 1
 
 ```
-== paperkit audit ==
+== factscribe audit ==
 project : examples/minimal
 facts   : 3 条      sections: 2 个
 numbers : 10 个（matched 5 / bound 4 / unmatched 1）
@@ -92,13 +92,13 @@ cites   : 2 次调用、2 个 key；bib 2 条（命中 1）
 ### 2.3 `matrix` —— 3 行，退出码 0
 
 ```
-== paperkit matrix ==
+== factscribe matrix ==
 写盘：examples/minimal/audit/matrix.md
 行数：3（每行一条 fact）
 # Fact 追溯矩阵
 
-- 项目：paperkit 最小验收样例
-- 生成：paperkit 0.1.0-mvp
+- 项目：factscribe 最小验收样例
+- 生成：factscribe 0.1.0-mvp
 - facts：3 条；sections：2 个
 
 | fact id | claim | value | source | locator | confidence | 被引用次数 | 被哪些节引用 |

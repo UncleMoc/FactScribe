@@ -46,7 +46,7 @@
 | `paper-b-zh` | 9,592 | 0.00（未过线） | 0.63（6 命中） | 0 | 0 | 3（3.13） |
 | **触发条数** | | **0** | **0** | **0** | **0** | **13（默认关）** |
 
-复算命令（仓根 `paperkit-dev/`）：
+复算命令（仓根 `factscribe-dev/`）：
 
 ```bash
 env PYTHONPATH=src python3 -m factscribe style ../paper --json

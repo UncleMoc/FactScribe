@@ -27,7 +27,7 @@
   `rhythm_plateau_level`。
 - `SENTENCE_UNIFORMITY` 在规范里标为节奏的正式判据。
 
-## 3. 读数（`paperkit-dev/` 下跑）
+## 3. 读数（`factscribe-dev/` 下跑）
 
 改后：
 

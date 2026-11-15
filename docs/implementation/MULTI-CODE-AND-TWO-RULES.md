@@ -19,7 +19,7 @@
 复现：
 
 ```bash
-cd /Users/moc/workspaces/SiAgent/paperkit-dev
+cd /Users/moc/workspaces/SiAgent/factscribe-dev
 python3 -m unittest discover -s tests
 python3 -m factscribe audit /tmp/holdout6/assertion-pointer-only/invalid      # exit 1，FACT_UNUSED_IN_SPAN + ASSERTION_DRIFT
 python3 -m factscribe audit /tmp/holdout6/free-duplicate-value/invalid        # exit 3，DUPLICATE_VALUE
@@ -115,7 +115,7 @@ python3 -m factscribe audit /tmp/holdout6/assertion-moved-to-appendix/invalid --
 | 两条同值、claim 不同 | 报黄 | 正是「用第二个 id 再登记一次同一个数」 |
 | 两条同值、claim 相同 | 不报 | 不是第二张票 |
 | `dup_ok = true` / 组内 `supersedes` / 派生 | 不报 | 人签豁免与结构性豁免 |
-| v1 项目（`paperkit.toml`） | `audit` **不启用** | v1 审计读数已冻结（回归夹具 234 绑定不变）；仍在 `check` 判 |
+| v1 项目（`factscribe.toml`） | `audit` **不启用** | v1 审计读数已冻结（回归夹具 234 绑定不变）；仍在 `check` 判 |
 | 一条 fact 的 value 是非单一数值（区间、比值串） | `canon_text` 返回 None，退回去空白字符串比较 | 只在逐字相同的写法上判 |
 | 三条以上同值 | 一次报出整组 id | 一个现象一条 findings |
 

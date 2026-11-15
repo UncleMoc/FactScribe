@@ -48,7 +48,7 @@
 复现：
 
 ```bash
-cd /Users/moc/workspaces/SiAgent/paperkit-dev
+cd /Users/moc/workspaces/SiAgent/factscribe-dev
 env PYTHONPATH=. python3 -m factscribe style ../paper
 env PYTHONPATH=. python3 -m factscribe style ../paper --json
 env PYTHONPATH=. python3 -m factscribe style ../paper --prompt

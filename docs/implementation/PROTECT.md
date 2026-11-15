@@ -30,7 +30,7 @@
 ## 2. 抽取规则（实现细节）
 
 - **统一遮罩**：`protect._code_view()` 复用 `texscan._mask_envs_and_verb`
-  抹掉 verbatim/`\verb`/`\pkignore`/`\todo` 等批注宏，再抹掉 `%` 注释；
+  抹掉 verbatim/`\verb`/`\fsignore`/`\todo` 等批注宏，再抹掉 `%` 注释；
   **保持长度与换行**，所以所有位置都能直接换算回源文件行号。
 - **事实标记**：`scan_tex(text).markers`，一次命令一条（多 id 写法按 id 拆开）。
 - **数字**：`scan_tex(text).masked` → `_extract_numbers(masked, text)`，
@@ -69,7 +69,7 @@
 ## 4. 误报边界（保守方向：多报不漏报）
 
 - 只改标点、断句、换行、空格、同义措辞 → 全绿。
-- 注释、verbatim、`\pkignore`/`\todo` 等批注宏内容 → 不参与保护面。
+- 注释、verbatim、`\fsignore`/`\todo` 等批注宏内容 → 不参与保护面。
 - 公式重排/换行 → 去空白后哈希相同，不报。
 - 数字写法不同但值相同 → `number_key` 归一后不报。
 - 表格里的横线命令、单元格内空白 → 不改变行哈希。

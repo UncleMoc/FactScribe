@@ -29,7 +29,7 @@ factscribe web --port 0        # 先起服务，项目稍后在页面里选
 
 - 启动时不读任何项目配置，只起服务；页面显示「还没有选论文项目」；
 - 页面里的「最近项目」和「加入项目列表」调 `GET /api/projects`、`POST /api/projects`；
-  `POST {path}` 校验文件夹（含 `paperkit.toml`）后**切换当前项目**并写登记册；
+  `POST {path}` 校验文件夹（含 `factscribe.toml`）后**切换当前项目**并写登记册；
 - `DELETE /api/projects?path=` 只从登记册移除，不动文件夹；移除当前项目后回到「未选择」；
 - 未选项目时，项目相关的接口返回 400 `NO_PROJECT`；`/api/capabilities` 仍可用；
 - 登记册与 MiniFactScribe 共用 `~/.factscribe/projects.json`（同一格式）。
@@ -72,7 +72,7 @@ URL：http://127.0.0.1:<port>
 
 改项目名与简介：`POST /api/projects/update`（要 token，要 `--allow-write`），入参
 `{path, name, description}`。路径必须已在登记册里（否则 400 `PROJECT_NOT_REGISTERED`）；
-登记册的 `name`/`description` 与项目自己 `paperkit.toml` 的 `title`/`description`
+登记册的 `name`/`description` 与项目自己 `factscribe.toml` 的 `title`/`description`
 一起改，其它键原样保留；返回 `{"ok":true,"project":{...}}`。
 
 新手引导：项目页的「打开示例论文」把内置示例复制到 `~/.factscribe/samples/guide`，

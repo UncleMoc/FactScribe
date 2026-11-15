@@ -1,7 +1,7 @@
 # SPEC-BUDGET｜篇幅预算：可判、可改的闭环（批 128）
 
 状态：批 128 冻结（实施依据）。
-范围：`paperkit.toml` 新增可选节 `[budget]`；`style` 新增黄牌判据
+范围：`factscribe.toml` 新增可选节 `[budget]`；`style` 新增黄牌判据
 `SECTION_LENGTH`；处方层新增第 10 条 `trim-to-budget`；`polish --plan`
 映射该码；`brief` 节清单加「篇幅预算」列。
 **不改**既有判据的取值与退出码；零第三方依赖（纯标准库）。

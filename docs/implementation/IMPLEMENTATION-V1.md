@@ -1,6 +1,6 @@
-# paperkit v1 实现记录
+# factscribe v1 实现记录
 
-日期：2026-11-07　　实现者：paperkit contributors
+日期：2026-11-07　　实现者：factscribe contributors
 规格：`SPEC-V1.md`；闸门代码 commit `b9a66e3`。
 
 ---
@@ -8,11 +8,11 @@
 ## 0. 交付
 
 ```
-paperkit-dev/
-  paperkit.py                     # 单文件 CLI，纯标准库；v1.0.0
+factscribe-dev/
+  factscribe.py                     # 单文件 CLI，纯标准库；v1.0.0
   SPEC-V1.md                      # 29 条裁决 + 新契约 + 边界
   IMPLEMENTATION-V1.md            # 本件
-  tests/test_paperkit.py          # 87 例 unittest（原 46 + 新 41），全离线
+  tests/test_factscribe.py          # 87 例 unittest（原 46 + 新 41），全离线
   tests/fixtures/redteam-b1/      # 红队 B1 反例（短 value + 编造数字）
   tests/fixtures/redteam-b4/      # 红队 B4 反例（嵌套章节）
   examples/minimal/               # 已升级：source_sha256 + 人签 MANIFEST + expr
@@ -34,11 +34,11 @@ paperkit-dev/
 | 5 | `derived` 的 `expr` 求值 | `eval_expr`（ast 白名单，禁 eval）、`_cycles`、`run_check` | 无 expr = 红；算不对 = 红；环 = 红；父被 supersedes = 红；算式越界（调用/属性）= 红 | `TestV1DerivedExpr` 6 例（ok/不符/缺 expr/ast 拦截/环/superseded 父） |
 | 6 | 红队反例夹具 | `tests/fixtures/redteam-b1|b4` | 见 §2 | `TestRedTeamCounterexamples` 2 例 |
 
-附带落的：B3 词法流水线（verbatim/verb/pkignore → 注释 → 命令 → 上下标 → 数字）、
+附带落的：B3 词法流水线（verbatim/verb/fsignore → 注释 → 命令 → 上下标 → 数字）、
 B4 递归 glob + `\input` 闭包 + `UNSCANNED_TEX`/coverage、C4 科学计数法/千分位/
 `percent`、C3 `kind=config`、C6 `LOW_BINDING_RATE`/`DUPLICATE_VALUE`、C7 标识格式
 校验、C8 多 bib/`@string`/crossref、C9 `supersedes`/metric 冲突（黄）、C10
-`paperkit preamble`、D4 source 必须 `results/` 下、D5 id 归一判重、D6/D7 coverage +
+`factscribe preamble`、D4 source 必须 `results/` 下、D5 id 归一判重、D6/D7 coverage +
 attestation、D10 图无 CSV 黄。
 
 ---
@@ -48,10 +48,10 @@ attestation、D10 图无 CSV 黄。
 **是。** 夹具是真实项目目录，测试直接跑 CLI：
 
 ```
-$ python3 paperkit.py audit tests/fixtures/redteam-b1 --json | ...
+$ python3 factscribe.py audit tests/fixtures/redteam-b1 --json | ...
 exit 1 red [('UNMATCHED_NUMBER','1422'), ('UNMATCHED_NUMBER','4.2e-5'), ('UNMATCHED_NUMBER','4242')]
 
-$ python3 paperkit.py audit tests/fixtures/redteam-b4 --json | ...
+$ python3 factscribe.py audit tests/fixtures/redteam-b4 --json | ...
 exit 1 red [('UNMATCHED_NUMBER','3.7%','sections/chapters/intro.tex:2:29'),
              ('UNMATCHED_NUMBER','12',  'sections/chapters/intro.tex:2:69')]
 ```
@@ -113,10 +113,10 @@ matrix -> 3 行
    那件事；绑定作用域是「行」，跨行命题错配看不见。
 3. **引用只验标识**：默认不联网、不比对题名/作者；格式合法但内容编造的 DOI 在默认
    路径放行。
-4. **`build` 仍是 shell 字符串**（B5 只落了规格）：跑陌生仓库的 `paperkit build`
+4. **`build` 仍是 shell 字符串**（B5 只落了规格）：跑陌生仓库的 `factscribe build`
    等于执行任意命令。v1.1 改 argv + 允许列表。
 5. **图里数字**：无 `.csv` 只出黄，不解析 PNG/PDF；表内纯排版数字仍需绑定或
-   `\pkignore`。
+   `\fsignore`。
 6. **分词边界**：`10 000` 可能被合并；万/亿、Unicode minus、复合 value 对多数字
    未覆盖；`kind=config` 的 value 仍保留裸数别名。
 7. **账本 append-only 靠 git**：工具不做哈希链/签名，改写历史仍可绕过。
@@ -130,13 +130,13 @@ matrix -> 3 行
 ## 6. 复现命令
 
 ```bash
-cd paperkit-dev
+cd factscribe-dev
 python3 -m unittest discover -s tests            # 87 例，全离线
-python3 paperkit.py check  examples/minimal      # 0
-python3 paperkit.py audit  examples/minimal      # 1（2 红 7 黄）
-python3 paperkit.py audit  examples/minimal --json
-python3 paperkit.py audit  examples/minimal --strict   # 黄也拦
-python3 paperkit.py preamble examples/minimal    # 写 audit/preamble.tex
-python3 paperkit.py audit  tests/fixtures/redteam-b1   # 1
-python3 paperkit.py audit  tests/fixtures/redteam-b4   # 1
+python3 factscribe.py check  examples/minimal      # 0
+python3 factscribe.py audit  examples/minimal      # 1（2 红 7 黄）
+python3 factscribe.py audit  examples/minimal --json
+python3 factscribe.py audit  examples/minimal --strict   # 黄也拦
+python3 factscribe.py preamble examples/minimal    # 写 audit/preamble.tex
+python3 factscribe.py audit  tests/fixtures/redteam-b1   # 1
+python3 factscribe.py audit  tests/fixtures/redteam-b4   # 1
 ```

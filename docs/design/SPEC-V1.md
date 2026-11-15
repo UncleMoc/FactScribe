@@ -1,4 +1,4 @@
-# paperkit SPEC v1 —— 红队裁决与新契约
+# factscribe SPEC v1 —— 红队裁决与新契约
 
 日期：2026-11-07　　对象：`SPEC.md`（v0，红队攻击稿 `/tmp/pk-redteam/RED.md`，29 条）
 闸门实现：commit `b9a66e3`（代码 + 测试 + 反例夹具）
@@ -26,14 +26,14 @@ sha256 的原始产物**，再把原始产物钉到**人签清单**。绿的含�
 |---|---|---|---|---|
 | B1 | 阻断 | 值级匹配退化成数字白名单；子串实现让编造数字全绿 | **采纳** | 匹配改 token 锚定（正则边界 + 数值规范化），正文数字必须**内联绑定**到 fact 并在该 fact.value 里；未绑定命中只算黄，未命中红。`\fact{}` 绑定是硬约束。 |
 | B2 | 阻断 | 只写死 `\cite{a,b}`，natbib 全家不被检查 | **采纳** | 抽取改为「任意 `*cite*` 命令 + 可选参数」；未知 `*cite*` 命令 fail-closed 判红（`UNKNOWN_CITE_COMMAND`）；`\nocite{key}` 也核。 |
-| B3 | 阻断 | 跳过注释与 `\%` 归一化无顺序规定 | **采纳** | 写死唯一流水线：verbatim/verb/pkignore → 注释（`\%` 先于裸 `%`）→ 命令参数 → 上下标 → 数字。verbatim 内 `%` 不再是注释。 |
+| B3 | 阻断 | 跳过注释与 `\%` 归一化无顺序规定 | **采纳** | 写死唯一流水线：verbatim/verb/fsignore → 注释（`\%` 先于裸 `%`）→ 命令参数 → 上下标 → 数字。verbatim 内 `%` 不再是注释。 |
 | B4 | 阻断 | `sections/*.tex` 单层 glob，嵌套章节整体逃逸 | **采纳** | glob 默认递归（`sections/*.tex` 同时匹配 `sections/**/*.tex`）+ 解析 `\input/\include/\subfile` 闭包；`coverage.files_scanned` 进报告；闭包外 `.tex` 黄。 |
 | B5 | 阻断 | `build` 是 shell 字符串 → RCE | **部分采纳** | 规格 v1 改为**argv 数组 + 可执行文件允许列表 + 超时**（§3.2）；代码 v1.0 仍按字符串执行并加 600s 超时，RCE 面列入 §7，v1.1 落。 |
 | B6 | 阻断 | `source` 只验存在 → 账与正文同源编造 | **部分采纳** | 已落：`source_sha256` 现算比对 + `results/MANIFEST.toml` 人签清单 + value 数字必须字面出现在 source。未落：工具级 append-only 载体（靠 git/hook，见 §2.3）。 |
 | B7 | 阻断 | 派生值无算术校验，`derived_from` 可空 | **采纳** | 派生 fact 必写 `expr`；工具用 `ast` 白名单求值（四则+括号+`ID.num/.den`），与 value 比对；环检测；父被 supersedes 判红。禁 `eval`。 |
 | B8 | 阻断 | 退出码混语义，「0=无红」被读成可信 | **采纳** | 0 绿 / 1 红 / 2 配置 / 3 黄 / 4 内部错；报告头出 coverage；JSON 带 `schema_version`/`severity`；文档明写「0≠真」。 |
 | C1 | 严重 | 数学模式二难：抽则误报，不抽则漏报 | **部分采纳** | 取第三条路：`^`/`_` 的上下标视为结构量整段掩码；带 `=` 的数值照审。不做「数学模式整体跳过」也不做「数学模式全抽」。 |
-| C2 | 严重 | 年份/章节号/图表号让整节变红 | **驳回** | 反对按模式自动豁免（`2019` 既可能是年份也可能是「2019 条数据」，自动豁免会埋真漏洞）。改给**显式出口** `\pkignore{...}`；结构性数字靠上下标掩码与绑定消解。 |
+| C2 | 严重 | 年份/章节号/图表号让整节变红 | **驳回** | 反对按模式自动豁免（`2019` 既可能是年份也可能是「2019 条数据」，自动豁免会埋真漏洞）。改给**显式出口** `\fsignore{...}`；结构性数字靠上下标掩码与绑定消解。 |
 | C3 | 严重 | 超参/尺寸/间距无豁免位 | **部分采纳** | `kind = "config"` 入 schema，config 事实**不进全局值域**（不能当白名单），只可在绑定语境下核销；命令参数已整体豁免。不做「数值+名称成对」的全文 NLP。 |
 | C4 | 严重 | 归一化覆盖不到真实写法 | **部分采纳** | 已补：科学计数法整体成 token、`\,`/`~`/`;`/`{ , }` 千分位、`percent`/`pct`、`k/M/B`、`±` 复合值拆两数各自匹配。未补：万/亿、Unicode minus、复合 value 对多数字（记 §7）。 |
 | C5 | 严重 | 归一化过度：单位丢失、舍入无政策 | **部分采纳** | `%` 转成 `/100` 的独立值域，不再把 `16%` 当计数 `16` 静默命中（但 value 同时登记裸数别名这点仍是隐患，§7）；舍入政策 v1 取「不猜」：要么精确、要么写 derived expr。显示精度容差留 v2。 |
@@ -41,7 +41,7 @@ sha256 的原始产物**，再把原始产物钉到**人签清单**。绿的含�
 | C7 | 严重 | bib 只查字段存在，不查格式/题名，DOI 不 resolve | **部分采纳** | 已补：arXiv 新旧格式/DOI/URL 格式校验，非法即红；arXiv 与 DOI 都能 `--resolve`；未核验升黄。未补：题名/作者相似度比对、默认联网（离线契约优先）。 |
 | C8 | 严重 | 可选参数/多 bib/`@string`/crossref/`@misc` 误判 | **部分采纳** | 已补：可选参数、`\bibliography`/`\addbibresource` 多 bib、`@string` 宏、crossref 一层继承、`@misc/@online/@software/@dataset` 允许 `url`。未补：biblatex 全语法。 |
 | C9 | 严重 | 冲突靠 claim 全等，`supersedes` 无 schema | **部分采纳** | `supersedes` 已入 schema；冲突优先按 `metric + scope` 结构化分组；冲突从「提示」升为**黄（退出码 3）**。claim 自由文本仍按全等（语义冲突需作者写 metric）。 |
-| C10 | 严重 | `[[fact:A2]]` 无宏定义、标记含数字、绑定装饰化 | **采纳** | 定义 `\fact{ID}` 硬约束（标记区不进数字抽取，未知 id 红，行内数字必须匹配）；新增 `paperkit preamble` 生成 `\providecommand{\fact}[1]{}` 等宏。 |
+| C10 | 严重 | `[[fact:A2]]` 无宏定义、标记含数字、绑定装饰化 | **采纳** | 定义 `\fact{ID}` 硬约束（标记区不进数字抽取，未知 id 红，行内数字必须匹配）；新增 `factscribe preamble` 生成 `\providecommand{\fact}[1]{}` 等宏。 |
 | C11 | 严重 | 值级核销，命题与数字语义错配不可见 | **采纳** | 绑定作用域＝行：该行每个数字必须落在所绑定 fact 的 value 里；未绑定不再能换来绿。多个事实同行需写多个 id。 |
 | D1 | 一般 | 默认 UA 被限流 → 全 unverified → 全绿 | **部分采纳** | UA 带版本、超时已有；unverified 升黄、失败率 >50% 再出一条 `RESOLVE_DEGRADED` 黄。缓存/指数退避未做。 |
 | D2 | 一般 | unverified 在默认视图看不见 | **采纳** | 黄块置顶、计入退出码 3；`--strict` 把黄当红。 |
@@ -118,7 +118,7 @@ v0 的双杀反例（RED.md 附录：`results/` 自己写、账自己写、正�
 6. **分词是启发式**：`10 000` 可能被合并成一万；万/亿、Unicode minus、复合值（`12.4±3.1`）
    仍有边界；`kind=config` 的 value 同时登记裸数别名是已知宽松点。
 7. **账本「只追加」靠 git**：工具不写 VCS、不做哈希链签名；改写历史仍可绕过。
-8. **`build` 仍是 shell 字符串（v1.0）**：`paperkit build` 会执行仓库里的任意命令，
+8. **`build` 仍是 shell 字符串（v1.0）**：`factscribe build` 会执行仓库里的任意命令，
    只在你会信任该仓库时才跑（规格 v1 已要求 argv 允许列表，v1.1 落）。
 9. **绿不代表可复现**：它只说明「账有据、据未改、文有绑」；实验设计、统计口径、
    结论正确性都不在闸门能力范围内。
@@ -131,7 +131,7 @@ v0 的双杀反例（RED.md 附录：`results/` 自己写、账自己写、正�
 
 ```
 <project>/
-  paperkit.toml
+  factscribe.toml
   facts/*.toml
   results/                   # 原始产物；清单在这里
     MANIFEST.toml            # 人签清单（工具不生成）
@@ -140,7 +140,7 @@ v0 的双杀反例（RED.md 附录：`results/` 自己写、账自己写、正�
   audit/                     # 生成物（matrix.md / preamble.tex），不入库
 ```
 
-### 3.2 `paperkit.toml`
+### 3.2 `factscribe.toml`
 
 ```toml
 [project]
@@ -183,8 +183,8 @@ note = ""
 - 该行没有任何绑定、且谁都命中不了 → 红 `UNMATCHED_NUMBER`；
 - 未绑定但能命中某条 claim fact → 黄 `UNBOUND_NUMBER`；
 - 未知 id → 红 `UNKNOWN_FACT_MARKER`；
-- 显式豁免区：`\pkignore{...}` 与 `\begin{pkignore}…\end{pkignore}`（内容照排，不进审计）；
-- 宏由 `paperkit preamble` 生成到 `audit/preamble.tex`，正文导言区 `\input` 即可。
+- 显式豁免区：`\fsignore{...}` 与 `\begin{fsignore}…\end{fsignore}`（内容照排，不进审计）；
+- 宏由 `factscribe preamble` 生成到 `audit/preamble.tex`，正文导言区 `\input` 即可。
 
 ### 3.5 人签清单
 
@@ -287,7 +287,7 @@ version = 1
    - `redteam-b1`：短 value `42` + 正文 `1422 / 4.2e-5 / 4242` → 三个 `UNMATCHED_NUMBER`；
    - `redteam-b4`：`sections/chapters/intro.tex` 里的 `3.7% / 12` → 必须报出该文件。
 3. **变体语料**：`\citep/\citet/\citeauthor/\nocite`、可选参数、嵌套目录、verbatim、
-   科学计数法、千分位、上下标各至少 1 正 1 负（见 `tests/test_paperkit.py`）。
+   科学计数法、千分位、上下标各至少 1 正 1 负（见 `tests/test_factscribe.py`）。
 4. **全量单测**：`python3 -m unittest discover -s tests` 87 例全绿、全离线。
 5. 不再使用「恰好 2 处、一处不多」作为验收总判据（它奖励漏报，红队 D8）。
 
@@ -311,7 +311,7 @@ version = 1
 
 | 裁决 | 落点 | commit |
 |---|---|---|
-| B1 / C11 / C10（绑定与命题级） | `paperkit.py` `scan_tex`/`run_audit`；`\fact` 硬约束；`preamble` 命令 | `b9a66e3` |
+| B1 / C11 / C10（绑定与命题级） | `factscribe.py` `scan_tex`/`run_audit`；`\fact` 硬约束；`preamble` 命令 | `b9a66e3` |
 | B2 / C8 / D3（引用与 bib） | `_CITE_RE`/`_CITE_KNOWN`/fail-closed；`parse_bib` @string/crossref/多 bib；`valid_stable_id` | `b9a66e3` |
 | B3 / C1 / C4（词法流水线） | `_mask_envs_and_verb`/`_mask_scripts`/`_NUM_RE`/`_extract_numbers` | `b9a66e3` |
 | B4 / B8 / D6 / D7 / D9（覆盖/退出码/报告） | `_glob_paths`/`load_sections`/`all_tex_files`；`_exit_code`；`coverage`/`attestation`/schema | `b9a66e3` |
@@ -319,7 +319,7 @@ version = 1
 | B7（派生算术） | `eval_expr`/`_cycles`/`MISSING_EXPR`/`SUPERSEDED_PARENT` | `b9a66e3` |
 | C6 / C9 / D5（账本卫生） | `kind`/`metric`/`scope`；`LOW_BINDING_RATE`/`DUPLICATE_VALUE`；id 判重 | `b9a66e3` |
 | D2 / D8（验收与黄级） | 黄块置顶、`--strict`；反例夹具与变体测试 | `b9a66e3` |
-| C2（驳回自动豁免） | 只落显式 `\pkignore`，无自动年份豁免 | `b9a66e3` |
+| C2（驳回自动豁免） | 只落显式 `\fsignore`，无自动年份豁免 | `b9a66e3` |
 | B5 / C3 / C5 / C7 / D1 / D10（部分采纳的剩余半） | 只落规格与本文件 §7，代码留 v1.1 | 本件（文档） |
 | 本裁决表与契约 | `SPEC-V1.md` / `IMPLEMENTATION-V1.md` | 本件入库 commit（`git log -- SPEC-V1.md`） |
 

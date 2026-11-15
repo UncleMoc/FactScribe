@@ -15,7 +15,7 @@
 
 ```
 $ python3 -m factscribe build ../paper-b
-== paperkit build ==
+== factscribe build ==
 引擎：/opt/homebrew/bin/tectonic
 尝试：1 次
 产出：../paper-b/main.pdf（13 页，79370 字节）
@@ -24,7 +24,7 @@ exit 0
 
 ```
 $ python3 -m factscribe build ../paper-b-zh
-== paperkit build ==
+== factscribe build ==
 引擎：/opt/homebrew/bin/tectonic
 尝试：2 次
 产出：../paper-b-zh/main.pdf（13 页，264525 字节）

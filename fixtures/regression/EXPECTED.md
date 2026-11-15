@@ -8,7 +8,7 @@
 ## 命令
 
 ```bash
-cd paperkit-dev
+cd factscribe-dev
 python3 factscribe.py audit fixtures/regression/paper-en --json
 ```
 

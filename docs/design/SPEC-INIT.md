@@ -46,7 +46,7 @@ python3 -m factscribe init <目录> [--title "..."] [--author "..."] \
 
 ```text
 <目录>/
-├── paperkit.toml          # [project] title/authors/sections/facts/bib/build/manifest
+├── factscribe.toml          # [project] title/authors/sections/facts/bib/build/manifest
 ├── main.tex               # 极简导言区 + \fact 宏 + \input{sections/01-intro}
 ├── sections/01-intro.tex  # 占位正文；注释里写清「先记账、再绑 \fact{ID}」
 ├── facts/01-core.toml     # 空账（只有字段说明注释）

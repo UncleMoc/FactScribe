@@ -1,9 +1,9 @@
-# SPEC-V2.2｜FactScribe / paperkit 可执行规范
+# SPEC-V2.2｜FactScribe / factscribe 可执行规范
 
 > 状态：蓝队收敛稿（第 2 轮），替代 `docs/design/SPEC-V2.1.md`；v2.1 与 `docs/design/DESIGN-v2.md` 保留为历史靶子。
 > 输入：外部红队 `RED-2.md` 18 条（阻断 5／严重 8／一般 5），逐条裁决见 §1.3；`docs/design/SPEC-V2.1.md`（1172 行）；`paper/` 现网语料（48 facts／234 绑定 token／绑定级 0 红，读数见 §20.1）。
 > 本版的一句话：**把保证对象从"被扫描到的 token"换成"被渲染出的数字"。**
-> 命名说明：实现文件当前名为 `factscribe.py`（Python 模块仍为 `paperkit`）；本文命令统一写 `paperkit`，与实现同一工具。
+> 命名说明：实现文件当前名为 `factscribe.py`（Python 模块仍为 `factscribe`）；本文命令统一写 `factscribe`，与实现同一工具。
 
 ---
 
@@ -17,7 +17,7 @@
    - **PDF 文本回检**（L2/release 可选但推荐）：把 PDF 里抽出来的每个数字，与"账授权的数字集合"对表；宏/计数器/拼接出来的 `91.4` 在 PDF 里会露出来。
 3. v2.2 **明确声明自己只保证什么**：`PASS` 的含义是"渲染面上每一个数字都能定位到一个字面量 token，该 token 属于某个 BU，并被某条账授权；且每条账的引用与记录一致"。它**不**保证"这句话在科学上为真"，也不保证"隐藏的尝试没被藏起来"。报告字段 `strength: "containment_only"` 把这句话写进机器可读输出。
 4. **`PASS` 只在 L2 存在。** L0/L1 的"没查出问题"一律记 `UNVERIFIED`（独立退出码 8），CI 判定式写死为 `exit == 0 && verdict == "PASS"`。这是对 v2.1 最狠的一条漏洞（`verdict: PASS`＋`status: unverified`＋`exit 0` 三者并存）的正面修复。
-5. 用我们自己的论文当磨刀石：`paper/` 里现成的 5 处 `\pkignore{CTX-xx}`、6 处裸 fact id、124 个表格数字，全部是 v2.2 的**必红/必黄用例**（§21）；同时它 234 条绑定、绑定级 0 红，是**不许被新规则误伤**的回归基线（§20.3）；已知迁移红单列、不混进基线。
+5. 用我们自己的论文当磨刀石：`paper/` 里现成的 5 处 `\fsignore{CTX-xx}`、6 处裸 fact id、124 个表格数字，全部是 v2.2 的**必红/必黄用例**（§21）；同时它 234 条绑定、绑定级 0 红，是**不许被新规则误伤**的回归基线（§20.3）；已知迁移红单列、不混进基线。
 
 ---
 
@@ -60,9 +60,9 @@
 | B1 | 采纳 | `\tableinput` 是作者自己写下的审计隧道，124 个数字全在闸门外 | 闭包自动展开纯 `\input{#1}` 包装宏；表格必须进集并带映射（R-05、R-06） |
 | B2 | 采纳 | `places=0..4` 把 `10/16` 的值域撑成 `{1,0.6,0.62,0.625}`，改一个字符仍全绿（已复现） | 删除隐式舍入；值域＝`value` 精确形式∪`display` 显式形式（R-04） |
 | B3 | 采纳 | 段落一行→行级绑定＝整段背书，追加假句也绿（已复现） | 绑定单元改句级 BU＋按标记切段；一条 fact 只许一个 setting（R-02、R-03、R-04） |
-| B4 | 采纳 | `\pkignore` 参数不检查，塞整句假结论不涨红 | `\pkignore` 参数含 QUANT→`PKIGNORE_QUANT` 红；且不豁免代号（R-07、R-09） |
+| B4 | 采纳 | `\fsignore` 参数不检查，塞整句假结论不涨红 | `\fsignore` 参数含 QUANT→`FSIGNORE_QUANT` 红；且不豁免代号（R-07、R-09） |
 | S1 | 采纳 | fact id 与禁用代号同命名空间，照字面写会误红 20＋处，打补丁又能洗白 | 正文**禁止裸 fact id**（只许在 `\fact{}` 参数里）；代号规则与 fact 规则正交（R-09） |
-| S2 | 采纳 | 代号检查挂在掩码后必然看不见 `CTX-*` | 代号检查跑**原文层**；`\pkignore` 不豁免（R-09） |
+| S2 | 采纳 | 代号检查挂在掩码后必然看不见 `CTX-*` | 代号检查跑**原文层**；`\fsignore` 不豁免（R-09） |
 | S3 | 采纳 | `\todoq` 是渲染型 PENDING 框，不是注释；`main.tex` 又不在扫描面 | 按渲染判定→红；闭包根＝`main.tex`（R-05、R-08） |
 | S4 | 采纳 | 今天 `--strict` 全红且红因与事实无关；黄红同码无法分诊 | `FACT/COVERAGE/ADVISORY` 三 tier＋分离退出码（§6、R-12） |
 | S5 | **驳回** | 原命题"CI 必须带产物快照，否则这档只能本机跑"与 L0/L1/L2 分层冲突；L2 只需**摘要清单签名**，不必搬 payload 本体 | 只采纳其相对路径要求：`source_root` 必须相对（`ABSOLUTE_SOURCE_ROOT` 红）；证据缺席记 UNVERIFIED（R-11、R-12） |
@@ -71,7 +71,7 @@
 | G1 | 采纳 | 本仓真正漏的是拼写数字（ten/five），不是漏标；`_NUM_RE` 的保护只活在注释里 | 数字 token 定义升为规范条款＋拼写数字检测＋`paper/sections` 68 句 golden（R-01、§21） |
 | G2 | 采纳 | `human_todo.md` 根本不存在，5 处 `\todoq` 性质不同却无法区分 | 工具生成、人只改 `status/resolution`；`[required]/[optional]`，缺省 required（R-08） |
 | G3 | 采纳 | `build` 不读 audit，"禁止出 PDF"在代码里不存在（已复现） | `build`＝排版预览；`release`＝受控产物，前置校验报告新鲜度（R-13） |
-| G4 | 采纳 | 规则没有注册表才是真风险，不是行数 | 拆 `src/paperkit/*`＋`tools/bundle.py` 拼回单文件＋`RULES={code:(tier,fn)}`＋每条规则一个真实 fixture（§8.1） |
+| G4 | 采纳 | 规则没有注册表才是真风险，不是行数 | 拆 `src/factscribe/*`＋`tools/bundle.py` 拼回单文件＋`RULES={code:(tier,fn)}`＋每条规则一个真实 fixture（§8.1） |
 | G5 | 采纳 | 图内数字是 PDF 里最强的视觉证据，却完全不可达 | 图必须带 `.csv`/`.facts.json`；绘图脚本只从账/数据取数；caption 数字绑定（R-06） |
 | G6 | 采纳 | `confidence` 只是装饰，low 标一条编造数字照绿 | `low` 不得进摘要/主结果表；必须附区间＋人签；`LOW_CONF_IN_HEADLINE` 红（R-04） |
 
@@ -88,11 +88,11 @@
 | 2-B5 | 采纳 | 人签的是 id 不是内容，append-only 又允许同一 id 换 value ⇒ 签了等于没签 | 签名对象＝**内容哈希**（`id/value/display/source_sha256/run_id/observation.pointer/condition_hash/aggregation/rules_sha256/config_sha256`）；签名人身份来自密钥而非自填 `by`；`release` 重验；内容哈希变了没新签名 ⇒ `APPROVAL_STALE`（红）；批量批准 >10 条出 `APPROVAL_BATCH_LARGE`（黄） |
 | 2-S1 | 部分 | 并集授权确实"不判归属"，A/B 对调可全绿；但"禁止多 fact 组"会废掉多值段的合法表达（规范 §5.1 的示例与夹具都在用） | 组内 token 与 fact **按出现顺序一一对应**（`BINDING_ATTRIBUTION` 红）；数量不等时要求 display 集**两两不交**（`FACT_SET_OVERLAP` 红）＋每条 fact 拥有唯一 token；真·同值用 `co_claim` 显式声明。**驳回**"一组只许一个 fact"（见 §1.4-2） |
 | 2-S2 | 采纳 | §19 注册表里没有的码就是不会实现的码；`anchor`/`pair_with`/`paircheck` 是"不存在的缓解" | `anchor`、`pair_with` 进 fact schema 并实现（`ANCHOR_MISSING`、`PAIR_MISSING`）；补 `FACT_SET_OVERLAP`、`APPROVAL_STALE` 等缺失码；加规范自检 `SPEC_LINT`（正文出现的标识符必须在注册表/schema 里）；`DISPLAY_ORDER` **只在 BU 内**比较（驳回跨 BU 全局顺序，见 §1.4-8） |
-| 2-S3 | 采纳 | 审计器写 `facts.json` 同时踩 append-only 与 uid 分离，还会立刻把报告变过期 | 删除 `mark f.state=invalid`；新增全局不变量 **`AUDIT_WRITES_NOTHING`**（写集合白名单＝`audit/report.json`、`.paperkit/cache/`、`audit/stamp.json`）；状态变更走 `paperkit ledger invalidate`（人签、append-only） |
+| 2-S3 | 采纳 | 审计器写 `facts.json` 同时踩 append-only 与 uid 分离，还会立刻把报告变过期 | 删除 `mark f.state=invalid`；新增全局不变量 **`AUDIT_WRITES_NOTHING`**（写集合白名单＝`audit/report.json`、`.factscribe/cache/`、`audit/stamp.json`）；状态变更走 `factscribe ledger invalidate`（人签、append-only） |
 | 2-S4 | 采纳 | 证据层循环对象是 marker 驱动，而表/图/`\factblock` 三种绑定天然没有 marker | 定义 **`REF_SET`**＝marker ∪ 表格 cell map ∪ 表格 spec ∪ 图 sidecar ∪ `\factblock` ∪ `pair_with` 的并集；证据层以 `REF_SET` 为循环对象；报告新增 `proof.coverage.unvalidated_facts`，有未验证 fact ⇒ `proof` 封顶 `self_report`（`PROOF_COVERAGE_GAP`） |
 | 2-S5 | 部分 | per-attempt 与预注册可做；"证明没被藏起来的 attempt 不存在"在单侧证据下不可判 | `attempts[]` 一等公民；`metrics.json` 必须由 attempts 机械聚合；聚合规则预注册（`SELECTION_UNREGISTERED` 红）；`tool_call_count` 与 attempt 数交叉校验（`ATTEMPT_COUNT_MISMATCH` 红）；`NONCE_ABSENT` L2 升红。**驳回**"证明 attempt 全集"（见 §1.4-3） |
 | 2-S6 | 部分 | 文本输入白名单、包装宏语法化、root 签名都能做；"生成内容不可判"是静态审计的天花板 | `project.text_inputs` 默认 `[".tex",".txt",".md"]`，全部入闭包并被扫描；包装宏判定写成可执行语法（保守：出现 `\input` 家族/`\csname`/`#` 即视为包装，未登记即红）；`root_tex` 变更需签名（`ROOT_TEX_CHANGED`）；`\input` 目标不可静态解析 → `INPUT_DYNAMIC_TARGET` 红。**驳回** `INPUT_NONDETERMINISTIC`（见 §1.4-4） |
-| 2-S7 | 部分 | stamp 认证的是报告不是文档；`rules.json` 能让 L2 自我降级 | `stamp.compiled` 绑定 `root_tex/root_sha256/jobname/latexmk_inputs[]/pdf_sha256`；`release` 只许编译被审计的 root，范围不等即 `COMPILE_SCOPE_MISMATCH`；新增 `paperkit verify-pdf` 并给出发布脚本契约；升红表写进代码常量，`rules.json` **只能加严**，放宽需 owner 签名且报告列 `downgraded_rules`。**驳回**"arXiv 元数据强制"（见 §1.4-5） |
+| 2-S7 | 部分 | stamp 认证的是报告不是文档；`rules.json` 能让 L2 自我降级 | `stamp.compiled` 绑定 `root_tex/root_sha256/jobname/latexmk_inputs[]/pdf_sha256`；`release` 只许编译被审计的 root，范围不等即 `COMPILE_SCOPE_MISMATCH`；新增 `factscribe verify-pdf` 并给出发布脚本契约；升红表写进代码常量，`rules.json` **只能加严**，放宽需 owner 签名且报告列 `downgraded_rules`。**驳回**"arXiv 元数据强制"（见 §1.4-5） |
 | 2-S8 | 部分 | "互不相邻的量级簇"与它自己的两个例子矛盾（`3/6` 与 `5/6` 同量级），不可判定；但"一 fact 一 setting"本身是对的 | **废除"量级簇"判据**；改为结构性判据：每条定量 fact 必填 `setting`（可 null），每个 `display` 项可带 `setting`；出现 ≥2 个不同 setting ⇒ `FACT_MULTISETTING`（升 **FACT**，全层红）⇒ 必须拆 `C1a/C1b`。**驳回**原统计判据（见 §1.4-6） |
 | 2-G1 | 采纳 | §4.3 与 §5.2 对"逗号影响段边界"的定义互斥，两条路都红但红码不同 | 删除 §4.3 的"逗号影响段边界"半句；段只由标记组切分，且**标记向前覆盖（right-binding）**：组 `G_i` 覆盖"上一个组之后、`G_i` 之前"的文字；最后一个组之后的数字才 `UNBOUND_QUANT`。补 fixture 固定唯一 code |
 | 2-G2 | 部分 | 封闭量词表必漏（五例/两轮）；"九成五"按 v2.1 算法只能推出 0.9 | 加 **`X成Y` 算法**（`X*0.1+Y*0.01` ⇒ 0.95）；量词表扩充且 `symbols.json` 可加；表外"数字＋汉字"产 **weak token**，只出 `CJK_QUANT_SUSPECT`（黄）不阻断。**驳回**"任意后接都算量词"（见 §1.4-7） |
@@ -108,7 +108,7 @@
 | 2 | 2-S1：「禁止一个组覆盖多个 fact」 | 会废掉多值段的合法表达（`\fact{A2}\fact{A3}` 是规范 §5.1 的示例形态），并迫使一句拆成多个标记，可读性与迁移成本都不划算 | 组内归属仍依赖作者的书写顺序 | 顺序一一对应判据 + `co_claim` 显式声明 + `anchor`；误序即红，不再"并集放行" |
 | 3 | 2-S5：「证明被藏起来的 attempt 不存在」 | 单侧证据无法证明全集；这是证据层的根本上限（v2.1 §13.5 已自陈） | 跑 30 次只报最好的一次，若服务端不配合则不可见 | `attempts[]` 强制 per-attempt＋预注册聚合＋`ATTEMPT_COUNT_MISMATCH`＋回执 `attempt_index`/`nonce`；`NONCE_ABSENT` L2 红 |
 | 4 | 2-S6：`INPUT_NONDETERMINISTIC` 的静态判据 | 生成内容与手写内容在字节层不可区分；mtime/哈希只能证明"此刻是什么" | 审计之后、编译之前内容被脚本改写 | `release` 在编译前重哈希**全部** `inputs[]`，不符即 `REPORT_STALE`（exit 7）；stamp 记录 `latexmk_inputs[]` 的哈希 |
-| 5 | 2-S7：「stamp 必须进 arXiv 上传元数据」 | 我们控制不了 arXiv 的上传协议 | 有人手工上传一份没 stamp 的 PDF，平台不会拦 | `paperkit verify-pdf` 给出命令级契约＋发布脚本片段（§15.3）；README 写明"平台不拦，只保证可检出" |
+| 5 | 2-S7：「stamp 必须进 arXiv 上传元数据」 | 我们控制不了 arXiv 的上传协议 | 有人手工上传一份没 stamp 的 PDF，平台不会拦 | `factscribe verify-pdf` 给出命令级契约＋发布脚本片段（§15.3）；README 写明"平台不拦，只保证可检出" |
 | 6 | 2-S8：原「互不相邻的量级簇」判据 | 与规范自己的两个例子矛盾（`3/6` 与 `5/6` 同为 10⁰），实现者必然分叉 | 无（该判据被结构性判据替代） | `setting` 字段成为 schema 必填，`FACT_MULTISETTING` 由结构判定，不靠统计猜测 |
 | 7 | 2-G2：「中文数字后接任意汉字都算量词」 | 无词典不可判；会把"九章""三体"之类全打成 QUANT，误报洪水导致规则被关掉 | `五例`、`两轮` 这类表外数量仍只出黄色提示，不阻断 | weak token 只 advisory＋量词表可经 `symbols.json` 扩充＋`CJK_QUANT_SUSPECT` 计数进报告 |
 | 8 | 2-S2：「`DISPLAY_ORDER` 扩展到跨 BU 全局顺序」 | 同一 fact 在 related/method/results 多处复用时，全局顺序约束误报率高，且"顺序"对多写法无意义 | 同一 fact 跨 BU 的值顺序不受约束（语义搬运仍可能漏） | BU 内顺序判据 + §5.4 的 `anchor`/`pair_with`/归属判据；剩余风险进 §22 |
@@ -129,7 +129,7 @@
 | **附录** | 角色为 `appendix` 的文件，或 `\appendix` 之后的内容。 |
 | **账** | `facts.json`；唯一事实源，append-only。 |
 | **证据** | `runs/<run_id>/run.json` 指向的 payload 摘要、送达记录与签名回执（R-11）。 |
-| **受控产物** | 由 `paperkit release` 生成、带 `stamp.compiled` 的 PDF；本地 `latexmk` 出的不算。 |
+| **受控产物** | 由 `factscribe release` 生成、带 `stamp.compiled` 的 PDF；本地 `latexmk` 出的不算。 |
 | **verdict** | 唯一裁决字段，取值 `PASS / ADVISORY / UNVERIFIED / RED`；`exit` 由它唯一决定（§2.3）。 |
 
 ### 2.2 三层判定与 gate tier
@@ -290,7 +290,7 @@ D. number_ledger（读出口）
 **PDF 文本回检（L2/release，推荐开启）**
 
 ```
-paperkit verify-pdf paper.pdf --report audit/report.json [--warn-only]
+factscribe verify-pdf paper.pdf --report audit/report.json [--warn-only]
  1. pdftotext -layout 抽文本；缺 pdftotext → PDF_TOOL_MISSING（exit 2）
  2. 抽所有 NUM 形态的字面数字串
  3. 允许集 = report.number_ledger.raw ∪ canon 渲染形
@@ -551,7 +551,7 @@ for bu in BUS(global_stream):
 
 ### 6.3 抽取（runs → 账）的边界
 
-- 抽取器只写 `facts.proposed.json`，**不写** `facts.json`；批准是人的动作：`paperkit ledger approve <id> --key <key_id>` 对**内容哈希**签名（§16.2），不是"按 id 点一下"。
+- 抽取器只写 `facts.proposed.json`，**不写** `facts.json`；批准是人的动作：`factscribe ledger approve <id> --key <key_id>` 对**内容哈希**签名（§16.2），不是"按 id 点一下"。
 - 抽取字段白名单：只允许 `run.json` 的 `metrics` 与 grader 输出；**禁止**从 `*.log`、`response.json`、模型自述文本取指标（`EXTRACT_FORBIDDEN_SOURCE`，exit 2，抽取器自身报错）。
 - `facts.json` 不含自由文本字段给 LLM 读；`notes` 不进入提示词（由组装层过滤）。
 - 无数字的可证伪主张（"均优于基线"）→ 写 `claim_queue.md`，人工逐条确认/驳回；**不阻断**。这是 R-B4 的降级处理，也是我们接受"形态检测有地板"的代价。
@@ -648,13 +648,13 @@ EXPANDABLE = {input, include, subfile, import, includeonly}
 
 一个含 `\begin{tabular}` 的文件必须满足下列之一：
 
-1. **生成式**（推荐）：文件头有 `% paperkit:generated spec=tables/t1_main.spec.json`。`spec.json` 形如
+1. **生成式**（推荐）：文件头有 `% factscribe:generated spec=tables/t1_main.spec.json`。`spec.json` 形如
    ```json
    {"rows":[{"key":"pallets_flask-5014","cells":{"on":"A2","on_tokens":"A11"}}],
     "renderer":"tools/make_tables.py@sha256:..."}
    ```
    审计用**同一渲染器**从 facts 重算每格文本，与 `.tex` 逐格比对；不一致 → `TABLE_DRIFT`（红）。这证明"表＝账"，而不是"表里有几个合法数字"。
-2. **映射式**：`% paperkit:table-map {"12":{"on":"A2"}}`（行号→列→fact）。逐格校验 token ∈ `display_set(fact)`。
+2. **映射式**：`% factscribe:table-map {"12":{"on":"A2"}}`（行号→列→fact）。逐格校验 token ∈ `display_set(fact)`。
 3. **内联式**：单元格里写 `91.4\fact{A2}`（段内唯一 token，按 R-03 绑定）。
 
 三者皆无 → `TABLE_UNBOUND`（COVERAGE；L0 黄，L2 红）。
@@ -678,18 +678,18 @@ EXPANDABLE = {input, include, subfile, import, includeonly}
 
 ---
 
-## 9. 判据 R-07：`\pkignore` 与其它豁免宏
+## 9. 判据 R-07：`\fsignore` 与其它豁免宏
 
-- `\pkignore{X}` 只允许包**非定量标识符/短标签**（如 `sphinx-10449`）。
-- **例外：`\pkignore` 包裹 `table/tabular` 整块时，走 R-06 的表格通道**（生成式/映射式/内联式），不按"参数含 QUANT"报 `PKIGNORE_QUANT`。否则本仓 5 张表会被同一条规则重复判红，而表格真正需要的是 cell→fact 映射，不是豁免。
-- 参数区间内抽 QUANT：命中 ≥1 个 → `PKIGNORE_QUANT`（**红**，exit 1）。B4 的 `\pkignore{We resolved 99 of 100 tasks...}` 必红。
-- `\pkignore` **不豁免** R-09 代号检查、不豁免 R-08 的 TODO 渲染检查（回应内部 S2）。
-- 允许的豁免宏只有 `\pkignore`；`\pknote`/`\fixnote` 视为渲染型批注（R-08）。
+- `\fsignore{X}` 只允许包**非定量标识符/短标签**（如 `sphinx-10449`）。
+- **例外：`\fsignore` 包裹 `table/tabular` 整块时，走 R-06 的表格通道**（生成式/映射式/内联式），不按"参数含 QUANT"报 `FSIGNORE_QUANT`。否则本仓 5 张表会被同一条规则重复判红，而表格真正需要的是 cell→fact 映射，不是豁免。
+- 参数区间内抽 QUANT：命中 ≥1 个 → `FSIGNORE_QUANT`（**红**，exit 1）。B4 的 `\fsignore{We resolved 99 of 100 tasks...}` 必红。
+- `\fsignore` **不豁免** R-09 代号检查、不豁免 R-08 的 TODO 渲染检查（回应内部 S2）。
+- 允许的豁免宏只有 `\fsignore`；`\pknote`/`\fixnote` 视为渲染型批注（R-08）。
 - 每次使用必须登记进 `human_todo.md`（`class: ignore`，`required: no`），未登记 → `IGNORE_NOT_TRACKED`（advisory）。
-- 必须计数：报告 `counts.pkignore` 给出总次数；`counts.pkignore != human_todo.md 中 class=ignore 的行数` → `IGNORE_NOT_TRACKED`（advisory，L2 升红）。
-- `\newcommand{\pkignore}` 的定义体若含 `#1` 之外的渲染内容 → `EXEMPTION_MACRO_SUSPECT`（红）。
+- 必须计数：报告 `counts.fsignore` 给出总次数；`counts.fsignore != human_todo.md 中 class=ignore 的行数` → `IGNORE_NOT_TRACKED`（advisory，L2 升红）。
+- `\newcommand{\fsignore}` 的定义体若含 `#1` 之外的渲染内容 → `EXEMPTION_MACRO_SUSPECT`（红）。
 
-**边界**：`\pkignore{CTX-15}` 里 `CTX-15` 被 R-09 抓；若作者把它包成 `\pkignore{\texttt{CTX-15}}`，仍在原文层可见 → 仍抓。
+**边界**：`\fsignore{CTX-15}` 里 `CTX-15` 被 R-09 抓；若作者把它包成 `\fsignore{\texttt{CTX-15}}`，仍在原文层可见 → 仍抓。
 
 **退出码**：1。
 
@@ -718,7 +718,7 @@ render_class(macro):
 ### 10.2 `human_todo.md`（工具生成，人只改两列）
 
 ```markdown
-<!-- paperkit:todo v1 -->
+<!-- factscribe:todo v1 -->
 | id | source | macro | class | required | owner | due | status | resolution |
 |---|---|---|---|---|---|---|---|---|
 | T-0001 | main.tex:29 | \title | render | yes | moc | 2026-11-15 | open | |
@@ -746,7 +746,7 @@ render_class(macro):
 
 ### 11.1 判定输入
 
-- `RAW` 层文本（**不是** `PROSE`——否则 `\pkignore` 里看不见，内部 S2）。
+- `RAW` 层文本（**不是** `PROSE`——否则 `\fsignore` 里看不见，内部 S2）。
 - `symbols.json`：
   ```json
   {"schema":"symbols/1",
@@ -779,7 +779,7 @@ for span in RAW_minus_masked_args(file):
 - **正文**：闭包减 appendix 角色减 `\appendix` 之后减 code env。
 - **附录**：允许 `internal` 代号出现；未登记的代号 → `CODENAME_UNREGISTERED`（advisory；L2 红）。
 - `\fact{}` 参数先掩码，所以 `\fact{E5}` 不触发。
-- `\pkignore` 不豁免。
+- `\fsignore` 不豁免。
 
 ### 11.3 白名单默认值与迁移
 
@@ -903,7 +903,7 @@ for span in RAW_minus_masked_args(file):
 
 - `payload.request_body_sha256` / `payload.response_body_sha256`：**只叫 payload 摘要**。它们等于 `request.body_sha256`/`response.body_sha256` 只证明"同一个文件里两个字段自洽"，**不构成送达性证据，不得出现在 `proof_class` 任何一栏的判定里**（2-B3 第 4 条）。
 - `delivery.receipt`：**必须同时钉 `request_body_sha256`、`response_body_sha256`、`run_id`、`attempt_index`**。缺任一项、或任一项与 run.json 不符 → `RECEIPT_SCOPE_MISMATCH`（红）。v2.1 只钉 request，等于"回执证明请求发出过，响应仍可任意"——指标恰恰来自响应。
-- `delivery.signature`：对 `receipt` 的 canonical JSON（JCS）做 detached ed25519 签名。验签密钥必须来自**项目目录之外**的 `project.trusted_keys_file`（绝对路径）。密钥文件在项目内、或被 `paperkit.toml` 指向项目内路径 → `TRUSTED_KEYS_IN_PROJECT`（红）。缺密钥 → `proof` 最高 `digest_only`。
+- `delivery.signature`：对 `receipt` 的 canonical JSON（JCS）做 detached ed25519 签名。验签密钥必须来自**项目目录之外**的 `project.trusted_keys_file`（绝对路径）。密钥文件在项目内、或被 `factscribe.toml` 指向项目内路径 → `TRUSTED_KEYS_IN_PROJECT`（红）。缺密钥 → `proof` 最高 `digest_only`。
 - `runner_sha256`：跑出 metrics 的 grader/runner 程序哈希，必须等于 `project.runner_sha256`（登记在签名配置里），否则 L2 `RUNNER_UNPINNED`（COVERAGE，5）。
 - `signed_by` / `record_signature`：对 canonical run.json（去掉这两个字段）的 detached 签名。签名者若与服务端回执同一密钥，**不额外提升** `proof`；若是 owner 密钥，可用于 `digest_only` 的摘要清单。未签名 → `proof` 最高 `self_report`。
 - `attempts[]`：**一等公民**（2-S5）。`metrics.json` 只能是由 attempts 机械聚合的派生文件；审计重算 `aggregation` 并与 `metrics` 比对，不符 → `AGGREGATION_MISMATCH`（红）。
@@ -971,7 +971,7 @@ if any(f in REF_SET not validated):
 
 # 全局不变量（2-S3）
 AUDIT_WRITES_NOTHING：
-  允许写 = {audit/report.json, .paperkit/cache/**, audit/stamp.json(仅 release)}
+  允许写 = {audit/report.json, .factscribe/cache/**, audit/stamp.json(仅 release)}
   越界写 → exit 4
 ```
 
@@ -1016,7 +1016,7 @@ AUDIT_WRITES_NOTHING：
 
 | 层 | 跑什么 | 需要 runs/ | 典型场景 |
 |---|---|---|---|
-| **L0** | 静态：QUANT、`\fact` 闭包、闭包覆盖、R-01A 渲染可归责性、表/图映射、`\pkignore`、TODO 渲染、代号、免责、账本 schema、STALE_LEDGER | 否 | 本地写作、PR 快速反馈 |
+| **L0** | 静态：QUANT、`\fact` 闭包、闭包覆盖、R-01A 渲染可归责性、表/图映射、`\fsignore`、TODO 渲染、代号、免责、账本 schema、STALE_LEDGER | 否 | 本地写作、PR 快速反馈 |
 | **L1** | L0 ＋ run record／observation／摘要／INVALID／attempt 聚合 | 是（或摘要清单） | 投稿前、实验批次结算 |
 | **L2** | L1 ＋ coverage 全绿＋`REF_SET` 全覆盖＋报告新鲜度＋`proof_class` 达标＋**PDF 回检** | 是 | CI 发布门、`release` |
 
@@ -1055,7 +1055,7 @@ else:                            verdict=PASS; exit=0
 ### 14.4 CI 契约（写死，发布脚本必须照抄）
 
 ```bash
-paperkit audit --level l2 --gate --json > audit.json
+factscribe audit --level l2 --gate --json > audit.json
 rc=$?
 [ $rc -eq 0 ] || exit $rc          # 红/未达层原样透传（1/5/6/8）
 python3 -c 'import json,sys; sys.exit(0 if json.load(open("audit.json"))["verdict"]=="PASS" else 1)'
@@ -1081,7 +1081,7 @@ python3 -c 'import json,sys; sys.exit(0 if json.load(open("audit.json"))["verdic
 
 ```json
 {
-  "schema": "paperkit-report/2.2",
+  "schema": "factscribe-report/2.2",
   "tool": {"version": "2.2.0", "rules_sha256": "sha256:..."},
   "generated_at": "2026-11-08T10:00:00Z",
   "level": "L2",
@@ -1099,7 +1099,7 @@ python3 -c 'import json,sys; sys.exit(0 if json.load(open("audit.json"))["verdic
     "tables/t1_main.tex": "sha256:...",
     "facts.json": "sha256:...",
     "refs.bib": "sha256:...",
-    "paperkit.toml": "sha256:...",
+    "factscribe.toml": "sha256:...",
     "symbols.json": "sha256:...",
     "roles.json": "sha256:...",
     "rules.json": "sha256:...",
@@ -1151,11 +1151,11 @@ release:
       "signed_by": "owner-key-id", "signature": "base64:..."
     }
  6) verify-pdf（见 15.3）
- 7) 写 PDF 元数据戳（\hypersetup{pdfkeywords={paperkit-stamp:<report_sha256>}}）
+ 7) 写 PDF 元数据戳（\hypersetup{pdfkeywords={factscribe-stamp:<report_sha256>}}）
 ```
 
 - **审计范围与产物范围必须相等**（2-S7）：`latexmk_inputs` 里出现任何不在 `report.coverage.closure ∪ 非文本输入` 里的文件 → `COMPILE_SCOPE_MISMATCH`（红，`release` 拒绝）。这就堵住"审 `main.tex`、编 `release.tex`"。
-- `paperkit build` **只做排版预览**：不检查报告；输出 PDF 头注释 `% UNSTAMPED PREVIEW`。
+- `factscribe build` **只做排版预览**：不检查报告；输出 PDF 头注释 `% UNSTAMPED PREVIEW`。
 - 无 stamp 的 PDF → `STAMP_MISSING`（`release` 拒绝；`verify-pdf` 非零）。
 - **边界**：本地 `latexmk` 永远能绕过。stamp 的作用是"可检出"，不是"不可能"。这是诚实的能力边界，写进 README（§1.4-5）。
 
@@ -1163,7 +1163,7 @@ release:
 
 ```bash
 # 发布脚本必须调用；退出码即发布闸
-paperkit verify-pdf paper.pdf --report audit/report.json
+factscribe verify-pdf paper.pdf --report audit/report.json
 # 0 = stamp 有效且 PDF 内数字全部可归责
 # 5 = PDF_UNACCOUNTED_NUMBER 或 STAMP_MISSING（COVERAGE）
 # 3 = 仅 STAMP_UNVERIFIED（advisory，可放行但要人看）
@@ -1171,7 +1171,7 @@ paperkit verify-pdf paper.pdf --report audit/report.json
 ```
 
 检查项：
-1. PDF 元数据里的 `paperkit-stamp:<report_sha256>` 存在且等于 `report.report_sha256`；
+1. PDF 元数据里的 `factscribe-stamp:<report_sha256>` 存在且等于 `report.report_sha256`；
 2. `stamp.compiled.pdf_sha256 == sha256(paper.pdf)`；
 3. PDF 文本里抽出的每个数字都在允许集内（R-01A 的 `PDF_UNACCOUNTED_NUMBER`）。
 
@@ -1188,13 +1188,13 @@ paperkit verify-pdf paper.pdf --report audit/report.json
 ### 16.1 append-only
 
 - `facts.json` 的每条 fact 带 `state` 与 `supersedes`；修改＝追加新条目 + 旧条目 `state:"superseded"`。原地改 `value` → `LEDGER_MUTATED`（红，通过 `digest_prev` 链检测）。
-- `facts.json` 顶部 `digest_prev` = 上一版文件的 sha256；`paperkit ledger append` 自动维护。链断 → `LEDGER_CHAIN_BROKEN`（红）。
+- `facts.json` 顶部 `digest_prev` = 上一版文件的 sha256；`factscribe ledger append` 自动维护。链断 → `LEDGER_CHAIN_BROKEN`（红）。
 - 每次变更记录 `{by, at, reason, evidence: {run_id, pointer}}`；缺 reason/evidence → `LEDGER_EDIT_UNEVIDENCED`（红）。
-- **审计器只读**（2-S3）：`AUDIT_WRITES_NOTHING`。`delivered:false` 不改 fact 状态；状态变更只能走 `paperkit ledger invalidate <id> --key <key_id>`（人签、append-only、写新条目）。
+- **审计器只读**（2-S3）：`AUDIT_WRITES_NOTHING`。`delivered:false` 不改 fact 状态；状态变更只能走 `factscribe ledger invalidate <id> --key <key_id>`（人签、append-only、写新条目）。
 
 ### 16.2 签名的对象＝内容哈希（2-B5）
 
-`paperkit ledger approve <id> --key <key_id>` 的签名对象是：
+`factscribe ledger approve <id> --key <key_id>` 的签名对象是：
 
 ```
 approve_target = sha256(canonical_json(JCS, {
@@ -1202,7 +1202,7 @@ approve_target = sha256(canonical_json(JCS, {
   observation: {run_id, pointer}, condition_hash, aggregation,
   setting, co_claim, anchor, pair_with,
   rules_sha256,          # 审计上下文，防止"改规则后重放旧签名"
-  config_sha256          # paperkit.toml + symbols.json + roles.json + disclaimer_patterns.json
+  config_sha256          # factscribe.toml + symbols.json + roles.json + disclaimer_patterns.json
 }))
 ```
 
@@ -1224,7 +1224,7 @@ L0/L1 不需要签名工具；L2/release 需要。缺 `ssh-keygen`/`minisign` �
 ### 16.5 权限
 
 - 本工具**不**提供进程级只读（驳回理由见 §1）。部署清单要求：写作进程的 cwd 只挂载 `sections/` 可写；`facts.json`/`audit/report.json`/`runs/` 由 owner 只读、写作进程另一 uid；报告由独立进程重算。
-- `paperkit release` 检测 `facts.json` 的 mtime 是否早于本次 audit 启动（并发改账）→ `LEDGER_CONCURRENT_EDIT`（红）。
+- `factscribe release` 检测 `facts.json` 的 mtime 是否早于本次 audit 启动（并发改账）→ `LEDGER_CONCURRENT_EDIT`（红）。
 - **`runs/` 进权限清单**（2-B3）：v2.1 的 uid 分离清单只覆盖 `sections/` vs `facts.json`，漏掉了证据链的根。本版明确：`runs/` 由 grader 写，写作进程只读。
 
 **退出码**：`LEDGER_MUTATED`/`LEDGER_CHAIN_BROKEN`/`LEDGER_EDIT_UNEVIDENCED`/`LEDGER_CONCURRENT_EDIT`/`APPROVAL_STALE`/`CO_CLAIM_ASYMMETRIC`→1；`APPROVAL_BATCH_LARGE`/`CONFIG_UNSIGNED`→3（L2 的 `CONFIG_UNSIGNED`→5）；`SIGNATURE_TOOL_MISSING`→2。
@@ -1273,7 +1273,7 @@ L0/L1 不需要签名工具；L2/release 需要。缺 `ssh-keygen`/`minisign` �
 ## 18. 判据 R-16：超时、增量、异常
 
 - **超时＝失败**：`audit` 默认 120s；超时 → exit 4，消息含"超时不是跳过"。禁止 fail-open。
-- **增量缓存**：`.paperkit/cache/`，键＝`hash(文件内容) + rules_sha256 + level`；**不用 mtime**（驳回内部建议的 mtime 跳过：checkout 会重置 mtime，导致漏扫）。
+- **增量缓存**：`.factscribe/cache/`，键＝`hash(文件内容) + rules_sha256 + level`；**不用 mtime**（驳回内部建议的 mtime 跳过：checkout 会重置 mtime，导致漏扫）。
 - 缓存命中只跳过"文件级静态规则"，**不跳过**跨文件规则（闭包、重复 value、代号全局统计）。
 - 并行：文件级并行（`--jobs N`，默认 CPU 数一半）；汇总阶段串行，保证 issue 顺序稳定（按 file,line,col,code 排序）。
 - 异常一律 exit 4，并在 JSON 里带 traceback 摘要；**绝不**把异常降级成 advisory。
@@ -1346,7 +1346,7 @@ L0/L1 不需要签名工具；L2/release 需要。缺 `ssh-keygen`/`minisign` �
 | `TABLE_BARE_LITERAL` | COVERAGE | 5 | R-06（2-S4） |
 | `FIGURE_UNBOUND` | COVERAGE | 5 | R-06 |
 | `FIGURE_UNVERIFIED` | ADVISORY | 3 | R-06 |
-| `PKIGNORE_QUANT` | FACT | 1 | R-07 |
+| `FSIGNORE_QUANT` | FACT | 1 | R-07 |
 | `EXEMPTION_MACRO_SUSPECT` | FACT | 1 | R-07 |
 | `IGNORE_NOT_TRACKED` | ADVISORY | 3 | R-07 |
 | `TODO_IN_PDF` | FACT | 1 | R-08 |
@@ -1413,7 +1413,7 @@ L0/L1 不需要签名工具；L2/release 需要。缺 `ssh-keygen`/`minisign` �
 
 ### 19.3 规范自检（`SPEC_LINT`，2-S2）
 
-CI 跑 `paperkit spec-lint SPEC-V2.2.md src/paperkit/`：
+CI 跑 `factscribe spec-lint SPEC-V2.2.md src/factscribe/`：
 1. 抽取正文里所有反引号标识符（`[A-Z][A-Z0-9_]{3,}` 与 snake_case 字段名）；
 2. 凡出现在"判据/算法/边界"段落、但既不在 §19.2 注册表、也不在 schema 字段表、也没有 `INFO(` 声明的标识符 → `SPEC_LINT`（exit 2）；
 3. 凡在 §5/§8/§13 被称作"缓解/检查"的名词，必须在注册表里有对应 code，否则构建失败。
@@ -1494,7 +1494,7 @@ CI 跑 `paperkit spec-lint SPEC-V2.2.md src/paperkit/`：
 
 **依赖方向（单向，禁止回指）**：
 `cli → {audit, check, report, build} → rules/* → {texscan, ledger, bib, closure} → stdlib`。
-规则之间**零 import**；共享结构体放 `models.py`（Fact、Issue、BU、Token）。`tools/bundle.py` 仍按拓扑序拼回单文件，产出的 `paperkit.py` 与拆分前逐字节等价（或仅版本号差异）。
+规则之间**零 import**；共享结构体放 `models.py`（Fact、Issue、BU、Token）。`tools/bundle.py` 仍按拓扑序拼回单文件，产出的 `factscribe.py` 与拆分前逐字节等价（或仅版本号差异）。
 
 ### 20.5 后续步骤（规则已有坐标后）
 
@@ -1522,8 +1522,8 @@ CI 跑 `paperkit spec-lint SPEC-V2.2.md src/paperkit/`：
 | F04 | `sections/01_intro.tex:14-16` | 3 × `\todoq{...}` | `TODO_IN_PDF` 红 ×3 + `TODO_REQUIRED_OPEN` | 缺省 required |
 | F05 | `sections/02_related.tex:6-7` | 2 × `\todoq{...}` | 红 ×2 | 同上 |
 | F06 | `sections/00_abstract.tex:12-21` | 5 × `% TODO(n):` | `TODO_COMMENT` 黄，**不红** | 注释不进 PDF（防误红） |
-| F07 | `sections/03_system.tex:51,57,61,66,71` | `\pkignore{CTX-15}` 等 5 处 | `CODENAME_IN_BODY` 红 ×5 | 首版 `symbols.json` 把 CTX-xx 登记为 internal；掩码层看不见（内部 S2） |
-| F08 | 合成（基于 03_system） | `\pkignore{We resolved 99 of 100 tasks.}` | `PKIGNORE_QUANT` 红 | B4 原反例 |
+| F07 | `sections/03_system.tex:51,57,61,66,71` | `\fsignore{CTX-15}` 等 5 处 | `CODENAME_IN_BODY` 红 ×5 | 首版 `symbols.json` 把 CTX-xx 登记为 internal；掩码层看不见（内部 S2） |
+| F08 | 合成（基于 03_system） | `\fsignore{We resolved 99 of 100 tasks.}` | `FSIGNORE_QUANT` 红 | B4 原反例 |
 | F09 | `sections/04_mechanisms.tex:97` | `0/3 (E5 \fact{E5})` | `NAKED_FACT_ID` 红 | 正文裸 id |
 | F10 | `sections/04_mechanisms.tex:142` | `(D2 ...)(D3 ...)(D1 ...)(H1 ...)(D6 ...)` | `NAKED_FACT_ID` 红 ×5 | 同上 |
 | F11 | `tables/t1_main.tex` 等 5 表 | 124 个数字，无映射 | `TABLE_UNBOUND`（L2 红；L0 黄） | B1 的隧道 |
@@ -1533,10 +1533,10 @@ CI 跑 `paperkit spec-lint SPEC-V2.2.md src/paperkit/`：
 | F15 | `sections/05_eval.tex:40` | `we make no claim of superiority` | `DISCLAIMER_IN_RESULTS` **黄**（scope_claim） | 防误红：正当范围声明 |
 | F16 | 合成（05_eval 插入） | `本结果可能受限于样本规模。`（无数字） | `DISCLAIMER_IN_RESULTS` 红 | 套话在 Results |
 | F17 | `sections/07_threats.tex` | 正常 limitations 段 | 不红；未包 `\limitation` 的句子 → `LIMITATION_UNMACROED` 黄 | 角色判定 |
-| F18 | `paperkit.toml:8` | `source_root = "/Users/moc/..."` | `ABSOLUTE_SOURCE_ROOT` 红 | CI 不可移植（S5） |
+| F18 | `factscribe.toml:8` | `source_root = "/Users/moc/..."` | `ABSOLUTE_SOURCE_ROOT` 红 | CI 不可移植（S5） |
 | F19 | `facts/e_gates.toml:3-6` | 注释记录如何绕过 DUPLICATE_VALUE | 迁移后 `notes[]` 原文保留 | S6 的"知识丢失" |
 | F20 | `facts/c_crossmodel.toml` C1 | `3/6（24 步上限）；60 步 → 5/6` | `FACT_MULTISETTING`（**FACT 红**） | 一 fact 两 setting；必须拆 C1a/C1b |
-| F21 | `sections/05_eval.tex:29` | `\pkignore{sphinx-10449}` | 不红（登记 `external.instance`） | 合法豁免 |
+| F21 | `sections/05_eval.tex:29` | `\fsignore{sphinx-10449}` | 不红（登记 `external.instance`） | 合法豁免 |
 | F22 | `sections/05_eval.tex:15` | `one such run is present` | **已知漏**（`one` 后接 `such`，不触发）；记入 §22 | 拼写数字的边界（G1） |
 | F23 | `sections/05_eval.tex:48` | `The run is ten tasks and a single trial` | `SPELLED_QUANT` 黄（L2 红） | G1 |
 | F24 | `sections/01_intro.tex` | `如图 3`/`Table 2` 类交叉引用 | 不红 | `\ref` 参数已掩码 |
@@ -1594,13 +1594,13 @@ paper/ 冻结基线（v2.2 第 0 步，本次复核）：
   绑定级红 0（UNBOUND_QUANT / BOUND_MISMATCH / BINDING_ATTRIBUTION / FACT_UNUSED_IN_SPAN）
   paper/ 中多 fact 相邻标记（\fact{A}\fact{B}）出现 0 次 → 2-S1 的归属判据不误伤现网
   paper/ 中算术/计数器命令（\numexpr/\setcounter/\the\value/...）出现 0 次
-  paper/ 中宏定义体含数字：0 处（\fact/\pkignore/\sys/\todoq 均为空体或纯文本）
+  paper/ 中宏定义体含数字：0 处（\fact/\fsignore/\sys/\todoq 均为空体或纯文本）
   数字紧跟宏（SAFE 之外）0 处；唯一命中 0.55\linewidth 位于 \includegraphics 参数内，已被掩码
   数字紧跟闭合组（}digits）0 处 → NUM_AFTER_GROUP 不误伤现网
-  paper/main.tex 的 \providecommand{\fact}[1]{} 与 \pkignore 不触发 NUMERIC_IN_MACRO
+  paper/main.tex 的 \providecommand{\fact}[1]{} 与 \fsignore 不触发 NUMERIC_IN_MACRO
   paper/tables/*.tex 数字 124（t1 48 / t2 26 / t3 28 / t4 13 / t5 9），当前全在审计集外
-  paper/sections/03_system.tex 五处 \pkignore{CTX-xx} 在掩码层不可见
-  paper/tables/*.tex 整表包在 \pkignore 内 → 按 R-07 例外走 R-06 表格通道，不报 PKIGNORE_QUANT
+  paper/sections/03_system.tex 五处 \fsignore{CTX-xx} 在掩码层不可见
+  paper/tables/*.tex 整表包在 \fsignore 内 → 按 R-07 例外走 R-06 表格通道，不报 FSIGNORE_QUANT
 
 v2.1 已复现、v2.2 保留为夹具的行为：
   删掉 fact_value_keys 的 places=0..4 循环后：paper/ 仍 0 红 → 值域收紧不误伤 48 条

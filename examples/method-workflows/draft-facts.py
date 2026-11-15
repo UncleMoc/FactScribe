@@ -82,8 +82,8 @@ def main() -> int:
     args = ap.parse_args()
 
     project = args.project.resolve()
-    if not (project / "paperkit.toml").is_file():
-        print("不是 factscribe 项目（缺 paperkit.toml）：%s" % project, file=sys.stderr)
+    if not (project / "factscribe.toml").is_file():
+        print("不是 factscribe 项目（缺 factscribe.toml）：%s" % project, file=sys.stderr)
         return 2
 
     rows = read_rows(args.claims)

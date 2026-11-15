@@ -1,7 +1,7 @@
 # D. 成本归因（批 31，重放 107 份真实请求体）
 # 来源 FACTS.md §D；原始产物 experiments/ctx-compiler-redblue/BATCH31-COST.md
 # 注：FACTS.md 的 73.1k/21.9k/78.8k 等是四舍五入写法，账上取原始报告的字面精确值，
-#     以保证 value 能在 source 里逐 token 回查（paperkit G2''）。
+#     以保证 value 能在 source 里逐 token 回查（factscribe G2''）。
 
 [[fact]]
 id = "D1"

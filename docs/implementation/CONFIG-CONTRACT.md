@@ -7,7 +7,7 @@
 
 ## 1. 契约表（唯一规范形态）
 
-文件名 `factscribe.toml`（兼容旧名 `paperkit.toml`）。规范形态＝一张 `[project]` 表。
+文件名 `factscribe.toml`（旧配置名已移除，只认这一个名字）。规范形态＝一张 `[project]` 表。
 
 | 字段 | 必需 | 类型 | 缺省 | 别名/备注 |
 |---|---|---|---|---|
@@ -35,9 +35,9 @@
 
 | 规范名 | 允许的别名/写法 | 归一化结果 |
 |---|---|---|
-| 顶层 `schema` | `paperkit-project/3.x`、`factscribe/3.x` | 同一套 v3 |
-| fact 文件 `schema` | `paperkit-fact/3.x`、`factscribe-fact/3.x` | 同上 |
-| （无 schema） | `[project]`+`root_tex` / `[project]`+`sections` | 隐式 v3（补 `paperkit-project/3.0`） |
+| 顶层 `schema` | `factscribe-project/3.x`、`factscribe/3.x` | 同一套 v3 |
+| fact 文件 `schema` | `factscribe-fact/3.x` | 同上 |
+| （无 schema） | `[project]`+`root_tex` / `[project]`+`sections` | 隐式 v3（补 `factscribe-project/3.0`） |
 | `root_tex` ≡ `sections` | 两者同时给时 `root_tex` 优先 | `sections` 置空＋`CONFIG_ALIAS` 告警 |
 | `sections` | 数组或单个字符串 | 数组→清单；字符串→单文件 |
 | `bib` / `refs` | 同值 | `bib` |
@@ -85,7 +85,7 @@
 
 ```json
 {
-  "config": {"shape": "project-root", "schema": "paperkit-project/3.0",
+  "config": {"shape": "project-root", "schema": "factscribe-project/3.0",
              "file": "factscribe.toml",
              "warnings": [{"code": "CONFIG_UNKNOWN_FIELD", "severity": "info",
                             "field": "root_tx", "message": "…已忽略…",
@@ -106,7 +106,7 @@
 跑法（不写 `/tmp/holdout3`，只读）：
 
 ```bash
-cd paperkit-dev && python3 /tmp/blind_eval.py | tail -8
+cd factscribe-dev && python3 /tmp/blind_eval.py | tail -8
 ```
 
 | 族 | invalid 期望码 | 实际退出 | 实际命中码 | 判定 |

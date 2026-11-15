@@ -3,7 +3,7 @@
 # 不进全局数字值域（不能当数字白名单用），但照样要 source/sha 与 note 说明与谁冲突。
 
 # H1 与 D1 共用 metric=cost-per-task、scope=real-bill：两条同时在账上且值不同，
-# paperkit 会把它们作为 LEDGER_CONFLICT 列出来（黄），提醒写作代理不许只报一个。
+# factscribe 会把它们作为 LEDGER_CONFLICT 列出来（黄），提醒写作代理不许只报一个。
 [[fact]]
 id = "H1"
 claim = "成本口径冲突：我们比 mcode 贵 3 倍（旧口径）vs 1.66 倍（真实账单）"

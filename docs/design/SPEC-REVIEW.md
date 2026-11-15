@@ -62,7 +62,7 @@ python3 -m factscribe review --before <旧目录> --after <新目录> \
   与 `style --diff` 完全同路径；`before=` 参数照旧启用标题关系词/主语丢失比对。
 - `tide` 的账本写到临时目录：`review` 对文档树**只读**，不往 `--after/audit/`
   写账本或派生视图。`review` 判定的是「这一对目录」的闭合，不并入历史账链。
-- 目录缺 `paperkit.toml`、`--allow-new` 为负等用法问题按既有分层返回 2
+- 目录缺 `factscribe.toml`、`--allow-new` 为负等用法问题按既有分层返回 2
   （工具没跑起来），不伪装成「拒绝」。
 
 ---

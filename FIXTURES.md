@@ -15,7 +15,7 @@
 ```
 fixtures/
   hostile/<轮>-<编号>/      # 必须被判红的最小项目
-    paperkit.toml
+    factscribe.toml
     facts/ledger.toml
     sections/body.tex
     results/run.log + results/MANIFEST.toml
@@ -37,7 +37,7 @@ fixtures/
 | R1-B2 | `10/16` 的值域被四舍五入放宽，`1/16` 也能绑定同一 fact | 1 / `BOUND_MISMATCH` | **红 1 / `BOUND_MISMATCH`** | V2.2 R-03/R-04（内部 B2） | 是（值域只留精确商） |
 | R1-B3 | 同一物理行内两个 fact 值域取并集，A/B 两臂对调仍绿 | 1 / `BINDING_ATTRIBUTION` | **红 1 / `BINDING_ATTRIBUTION`** | V2.2 R-03/R-02（内部 B3） | 是（句级 BU＋顺序归属） |
 | R1-B1 | `\tableinput` 包装宏不在 `\input` 闭包，整张表绕开审计 | 5 / `TABLE_UNBOUND` | **红 5 / `TABLE_UNBOUND`** | V2.2 R-05/R-06（内部 B1） | 是（包装宏展开＋表格通道） |
-| R1-B4 | `\pkignore{...}` 参数塞整句假结论，被当批注抹掉 | 1 / `PKIGNORE_QUANT` | **红 1 / `PKIGNORE_QUANT`** | V2.2 R-07（内部 B4） | 是 |
+| R1-B4 | `\fsignore{...}` 参数塞整句假结论，被当批注抹掉 | 1 / `FSIGNORE_QUANT` | **红 1 / `FSIGNORE_QUANT`** | V2.2 R-07（内部 B4） | 是 |
 | R2-MACRO | 宏体携带 `9`、`1.4`，渲染出账上没有的 `91.4%` | 1 / `NUMERIC_IN_MACRO` | **红 1 / `NUMERIC_IN_MACRO`** | V2.2 R-01A（2-B1） | 是 |
 | R2-CONCAT | `9{}1.4\%` 拼接渲染成 `91.4%`，`91.4` 从不是 token | 1 / `NUM_AFTER_GROUP` | **红 1 / `NUM_AFTER_GROUP`（另报 `NUM_ADJACENT_GROUP`）** | V2.2 R-01A | 是（邻接判据＋错码修正） |
 | R2-NUMEXPR | `\the\numexpr 9+1\relax` 派生 10，扫描面只有 9/1 | 1 / `ARITH_IN_BODY` | **红 1 / `ARITH_IN_BODY`** | V2.2 R-01A | 是（错码修正） |
@@ -63,7 +63,7 @@ tables / figures / refs.bib / main.tex / results/MANIFEST.toml），`source_root
 ## 运行
 
 ```bash
-cd paperkit-dev
+cd factscribe-dev
 python3 -m unittest discover -s tests -p "test_fixtures.py" -v
 ```
 

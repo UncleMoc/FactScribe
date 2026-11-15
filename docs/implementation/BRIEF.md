@@ -35,7 +35,7 @@ Markdown，交给写作模型当依据；它不判断文字好坏，只把账里
 
 ## 3. 真实材料读数
 
-命令均在 `paperkit-dev/` 仓根执行：
+命令均在 `factscribe-dev/` 仓根执行：
 
 ```bash
 python3 -m factscribe brief ../paper-b    > /tmp/brief-b.md
@@ -116,7 +116,7 @@ fail-closed。
   的条数」——账里没有「事实归属哪一节」的字段，本批不新造归属关系。
 - 事实表按账本装载顺序（`facts/*.toml` 文件名排序 → 文件内顺序），不按 id
   重排；写作时可直接顺读，但不会得到字母序。
-- 两篇真材料共用同一份英文 `name`（`paperkit.toml` 只写了英文名），所以
+- 两篇真材料共用同一份英文 `name`（`factscribe.toml` 只写了英文名），所以
   中文简报的项目名仍是英文；这是账里的事实，简报不翻译。
 - 词表按仓内 `paper.tsv`（33 条）；项目若另放 `glossary.tsv` 会自动优先，
   与 `style` 一致。

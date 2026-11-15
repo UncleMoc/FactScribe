@@ -43,7 +43,7 @@
 | `paper-b` | 5,983 | 1 |
 | `paper-b-zh` | 9,592 | 1 |
 
-复算命令（仓根 `paperkit-dev/`）：
+复算命令（仓根 `factscribe-dev/`）：
 
 ```bash
 env PYTHONPATH=src python3 -m factscribe style ../paper --json

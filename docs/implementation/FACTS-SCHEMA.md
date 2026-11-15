@@ -9,7 +9,7 @@
 valid 干净**：配置面（`[project]` + `root_tex`）已经对上了，但事实账写成
 
 ```toml
-schema = "paperkit-fact/3.0"
+schema = "factscribe-fact/3.0"
 [[fact]]
 id = "A1"
 ...
@@ -25,7 +25,7 @@ id = "A1"
 ## 二、冻结的 schema（抄自 SPEC-V3.0 §11.1）
 
 ```toml
-schema = "paperkit-fact/3.0"   # 可选
+schema = "factscribe-fact/3.0"   # 可选
 
 [[fact]]
 id = "A2"                    # 必需，唯一，[A-Za-z0-9._-]
@@ -138,7 +138,7 @@ benign CLEAN 32/32、FALSE-RED 0（本轮修掉的 3 个误红全部来自 holdo
 ## 六、验收
 
 ```bash
-cd paperkit-dev
+cd factscribe-dev
 python3 -m unittest discover -s tests          # 184 tests, OK
 python3 /tmp/blind_eval.py | tail -8           # holdout1-4 聚合
 python3 /tmp/holdout4_only.py                  # 只统计 holdout4

@@ -6,7 +6,7 @@
 ## 一、这一轮的判决
 
 **红队（外部，22 条）总攻**：v2 是一份**意图声明**，不是可落地规范——大量"禁止/必须/收敛"缺少可执行判据，且 §4 自己把最关键的五个问题列为开放问题。
-**红队（内部，17 条）补刀**：现有实现已经在"漏红"——`10/16` 能把 `1/16` 判绿（四舍五入白名单）、`\tableinput` 是审计隧道、`\pkignore` 能包整句假结论、`\todoq` 真的把 `PENDING:` 印进 PDF。
+**红队（内部，17 条）补刀**：现有实现已经在"漏红"——`10/16` 能把 `1/16` 判绿（四舍五入白名单）、`\tableinput` 是审计隧道、`\fsignore` 能包整句假结论、`\todoq` 真的把 `PENDING:` 印进 PDF。
 
 **蓝队裁决**：39 条全覆盖——采纳 31／部分 7／驳回 1（驳回：内部 S5「CI 必须带产物快照」的原命题，与 §2.1「facts 只读」冲突，改为在 `release` 阶段要求）。
 
@@ -39,6 +39,6 @@
 
 ## 五、本轮产物
 
-- `paperkit-dev/SPEC-V2.1.md`（1172 行：39 条裁决 + 新判据 + 实施顺序）
+- `factscribe-dev/SPEC-V2.1.md`（1172 行：39 条裁决 + 新判据 + 实施顺序）
 - 论文清理（六类故障）：`experiments/ctx-compiler-redblue/BATCH42-PAPER-CLEANUP.md`（两版 0 红、234 条绑定、PDF 无 TODO）
 - 外部红队原文：`/tmp/fs-round1/RED-1.md`；内部红队：`experiments/ctx-compiler-redblue/FS-R1-RED-B.md`

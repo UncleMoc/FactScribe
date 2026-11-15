@@ -111,7 +111,7 @@ v5 增加四条判据与一个 diff 回路：
 
 ## 5. 验收：批 84 的 6 个退步
 
-命令（在 `paperkit-dev/` 下跑，`--diff` 指向原始论文目录）：
+命令（在 `factscribe-dev/` 下跑，`--diff` 指向原始论文目录）：
 
 ```bash
 python3 -m factscribe style /tmp/v4-regen/en --diff ../paper

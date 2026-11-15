@@ -25,7 +25,7 @@ facts/*.toml（事实账，导入生成，不手抄）
 <workspace>/                     # 工作区根：论文与实验的公共父目录
 ├─ factscribe.workspace.toml     # 可选标记：id、experiments_root
 ├─ paper/
-│  ├─ paperkit.toml              # 既有字段 + source_root（指工作区根）
+│  ├─ factscribe.toml              # 既有字段 + source_root（指工作区根）
 │  ├─ sections/*.tex
 │  └─ facts/
 │     ├─ <legacy>.toml           # 旧账不动

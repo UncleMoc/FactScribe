@@ -1,4 +1,4 @@
-# paperkit-dev — 规格（v0，待红蓝对抗）
+# factscribe — 规格（v0，待红蓝对抗）
 
 > **已被 `SPEC-V1.md` 取代（2026-11-07）。** 本件保留为红队攻击对象与历史稿；
 > 现行契约与 29 条裁决见 `SPEC-V1.md`，实现记录见 `IMPLEMENTATION-V1.md`。
@@ -19,7 +19,7 @@ LLM 写论文的通病不是文笔，是**两处不可复核的编造**：
 
 ```
 <project>/
-  paperkit.toml          # 项目声明
+  factscribe.toml          # 项目声明
   facts/*.toml           # 事实账（只追加；一条一个 id）
   results/               # 原始实验产物（只读，不复制；路径进 facts.source）
   sections/*.tex         # 正文（人或 agent 写）
@@ -27,7 +27,7 @@ LLM 写论文的通病不是文笔，是**两处不可复核的编造**：
   audit/                 # 生成物（不入库）
 ```
 
-`paperkit.toml`：
+`factscribe.toml`：
 
 ```toml
 [project]
@@ -55,11 +55,11 @@ note = ""
 
 ## 3. 三条命令（MVP）
 
-### `paperkit check`
+### `factscribe check`
 - 每个 fact：`id` 唯一、`source` 文件存在、`confidence` 合法、`derived_from` 指向存在的 id；
 - 冲突检测：同 `claim` 不同 `value` 且都没 `supersedes` → 报**冲突**（不是错，但必须列出）。
 
-### `paperkit audit`（核心）
+### `factscribe audit`（核心）
 对 `sections/*.tex`：
 
 1. **数字对账**：抽出所有数字（跳过注释、命令名、`\cite`/`\ref`/`\label` 参数），逐个到 facts 的 `value` 里找；
@@ -72,11 +72,11 @@ note = ""
 
 退出码：0＝无红；1＝有红；2＝用法/配置错。
 
-### `paperkit matrix`
+### `factscribe matrix`
 生成 `audit/matrix.md`：`fact id | claim | value | source | locator | 被哪些节引用`。
 这是给审稿人/复现用的追溯面，也是“银标”抽查面。
 
-### `paperkit build`
+### `factscribe build`
 执行 `project.build`；失败即非零退出。
 
 ## 4. 非目标（写清楚，避免跑偏）

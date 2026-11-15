@@ -1,6 +1,6 @@
 # E. 机械闸门：MiniMax 逐刀（批 14–24）
 # 来源 FACTS.md §E；原始产物 experiments/ctx-compiler-redblue/BATCH17-MINIMAX-FIXED.md
-# 注：本批多个臂的结果同为 0/3、0/2（不是笔误）。为躲开 paperkit 的
+# 注：本批多个臂的结果同为 0/3、0/2（不是笔误）。为躲开 factscribe 的
 #     DUPLICATE_VALUE 启发式（同值多 claim 视为「数字白名单」），value 里带上本臂的编号，
 #     编号在 source 的逐刀表里字面存在，仍可回查。
 

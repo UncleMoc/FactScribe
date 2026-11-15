@@ -172,7 +172,7 @@ facts.source ──①──> runs/ 里的运行记录 ──②──> 回执 r
 ## 4. 复现命令
 
 ```bash
-cd /Users/moc/workspaces/SiAgent/paperkit-dev
+cd /Users/moc/workspaces/SiAgent/factscribe-dev
 
 # 单测（194 例）
 python3 -m unittest discover -s tests
@@ -184,7 +184,7 @@ python3 -m unittest discover -s tests -p 'test_fixtures.py'
 python3 - <<'PY'
 import json, subprocess, sys
 from pathlib import Path
-ROOT = Path('/Users/moc/workspaces/SiAgent/paperkit-dev')
+ROOT = Path('/Users/moc/workspaces/SiAgent/factscribe-dev')
 for fam in sorted(p for p in Path('/tmp/holdout5').iterdir() if p.is_dir()):
     for kind in ('invalid', 'valid'):
         proj = fam / kind

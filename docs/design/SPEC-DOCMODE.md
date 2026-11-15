@@ -1,6 +1,6 @@
 # SPEC-DOCMODE — `style --doc`：Markdown 一等公民
 
-批 93。动机：现有 `style` 只认识 LaTeX 项目（必须 `paperkit.toml`，只扫
+批 93。动机：现有 `style` 只认识 LaTeX 项目（必须 `factscribe.toml`，只扫
 `sections/*.tex`）。把 Markdown 文件塞进项目跑，实测出现四类错误：
 
 1. 长标题不报 `HEADING_TOO_LONG`（Markdown `#` 标题不被识别）；
@@ -19,7 +19,7 @@ python3 -m factscribe style --doc a.md --doc b.md
 ```
 
 * `--doc` 可重复，也可一次给多个文件（`nargs="+"`，两种写法等价）。
-* doc 模式**不需要** `paperkit.toml`，也不读 `sections`/`facts` 配置。
+* doc 模式**不需要** `factscribe.toml`，也不读 `sections`/`facts` 配置。
 * `--doc` 与位置参数「项目目录」同时给出＝用法错，退出码 2。
 * doc 模式不支持 `--diff`（改写前目录属于项目形态），同时给出＝用法错，退出码 2。
 * 其它选项（`--json`、`--prompt`、`--rules`、`--report-unregistered`）照常可用。

@@ -18,7 +18,7 @@
 复现：
 
 ```bash
-cd /Users/moc/workspaces/SiAgent/paperkit-dev
+cd /Users/moc/workspaces/SiAgent/factscribe-dev
 python3 -m unittest discover -s tests          # 213 例
 python3 -m unittest discover -s tests -p "test_unused_bib.py"   # 10 例
 python3 -m factscribe audit fixtures/regression/paper-en --json # 0 红；bib_unused=[]
