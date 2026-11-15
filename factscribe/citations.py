@@ -44,6 +44,9 @@ class BibEntry:
     kind: str
     file: str
     line: int
+    # 条目最后一行（含）。`line` 是 `@type{key,` 那行；
+    # 两者合起来就是这条在文件里占的那几行——删条目要靠它。
+    end: int = 0
     fields: dict = field(default_factory=dict)
     inherited: set = field(default_factory=set)
 
@@ -114,7 +117,9 @@ def parse_bib(path: Path, root: Path) -> list[BibEntry]:
                 fields[name] = macros[bare.lower()]
         entries.append(BibEntry(
             key=key, kind=kind, file=rel,
-            line=text.count("\n", 0, m.start()) + 1, fields=fields,
+            line=text.count("\n", 0, m.start()) + 1,
+            end=text.count("\n", 0, i) + 1,
+            fields=fields,
         ))
     # crossref 一层继承（红队 C8-D）
     by_key = {e.key: e for e in entries}

@@ -144,6 +144,9 @@ const I18N = {
     'btn.stop': '停止',
     'btn.acceptWrite': '采纳并写入本节',
     'btn.appendFact': '追加事实',
+    'btn.newReportTemplate': '新建报告模板',
+    'btn.addCitation': '添加引用',
+    'btn.delete': '删除',
     'btn.source': '源码',
     'btn.preview': '预览',
     'btn.buildPreview': '编译预览',
@@ -167,6 +170,7 @@ const I18N = {
     'th.identifier': 'DOI / arXiv',
     'th.citeCount': '引用次数',
     'th.status': '状态',
+    'th.action': '操作',
     'cite.filterAll': '全部',
     'cite.filterNoId': '缺标识',
     'cite.filterUnused': '未引用',
@@ -181,7 +185,11 @@ const I18N = {
     'cite.needProject': '先载入工作台项目，再看引用。',
     'cite.error': '引用列表读不出来：',
     'cite.none': '没有符合条件的条目。',
-    'empty.noReports': '没有找到实验报告（experiments/*/reports/*.report.toml）',
+    'cite.needKey': '引用 key 不能为空',
+    'cite.added': '已添加引用',
+    'cite.deleted': '已删除引用',
+    'cite.confirmDelete': '删掉这条引用？{key}',
+    'empty.noReports': '还没有报告。报告由实验脚本产出（experiments/<实验>/reports/*.report.toml），也可以点右上角「新建报告模板」先生成一份。',
     'empty.noFacts': '账里还没有事实。',
     'empty.noRedYellow': '没有红黄项。',
     'empty.noReportSelected': '先选一份报告。',
@@ -198,6 +206,9 @@ const I18N = {
     'report.signed': '已签收',
     'report.unsigned': '未签收',
     'report.readOnly': '只读',
+    'report.newPrompt': '新报告的 id（默认 report-YYYYMMDD）',
+    'report.newNeedId': '报告 id 不能为空',
+    'report.templateCreated': '模板已建，填好 metrics 后检查/封存/签收',
     'state.actionDone': '{what}完成',
     'prefs.themeLight': '浅',
     'prefs.themeDark': '深',
@@ -286,6 +297,9 @@ const I18N = {
     'btn.stop': 'Stop',
     'btn.acceptWrite': 'Accept and write to section',
     'btn.appendFact': 'Append fact',
+    'btn.newReportTemplate': 'New report template',
+    'btn.addCitation': 'Add citation',
+    'btn.delete': 'Delete',
     'btn.source': 'Source',
     'btn.preview': 'Preview',
     'btn.buildPreview': 'Build preview',
@@ -309,6 +323,7 @@ const I18N = {
     'th.identifier': 'DOI / arXiv',
     'th.citeCount': 'Cites',
     'th.status': 'Status',
+    'th.action': 'Action',
     'cite.filterAll': 'All',
     'cite.filterNoId': 'Missing id',
     'cite.filterUnused': 'Unused',
@@ -323,7 +338,11 @@ const I18N = {
     'cite.needProject': 'Load a workbench project first, then open citations.',
     'cite.error': 'Cannot read the citation list: ',
     'cite.none': 'No entry matches this filter.',
-    'empty.noReports': 'No experiment reports found (experiments/*/reports/*.report.toml)',
+    'cite.needKey': 'Citation key is required',
+    'cite.added': 'Citation added',
+    'cite.deleted': 'Citation deleted',
+    'cite.confirmDelete': 'Delete this citation? {key}',
+    'empty.noReports': 'No reports yet. Reports come from experiment scripts (experiments/<experiment>/reports/*.report.toml), or click "New report template" at the top right to make one.',
     'empty.noFacts': 'No facts in the ledger yet.',
     'empty.noRedYellow': 'No red or yellow items.',
     'empty.noReportSelected': 'Pick a report first.',
@@ -340,6 +359,9 @@ const I18N = {
     'report.signed': 'Signed',
     'report.unsigned': 'Not signed',
     'report.readOnly': 'Read-only',
+    'report.newPrompt': 'Id for the new report (default report-YYYYMMDD)',
+    'report.newNeedId': 'Report id cannot be empty',
+    'report.templateCreated': 'Template created — fill in the metrics, then check / lock / sign',
     'state.actionDone': '{what} done',
     'prefs.themeLight': 'Light',
     'prefs.themeDark': 'Dark',
@@ -412,7 +434,7 @@ const I18N_KEYS = {
   '已签收': 'report.signed',
   '未签收': 'report.unsigned',
   '只读': 'report.readOnly',
-  '没有找到实验报告（experiments/*/reports/*.report.toml）': 'empty.noReports',
+  '还没有报告。报告由实验脚本产出（experiments/<实验>/reports/*.report.toml），也可以点右上角「新建报告模板」先生成一份。': 'empty.noReports',
   '账里还没有事实。': 'empty.noFacts',
   '没有红黄项。': 'empty.noRedYellow',
   '先选一份报告。': 'empty.noReportSelected',
@@ -2307,6 +2329,16 @@ function texMathParse(src) {
     if (name === 'mathit' || name === 'textit') {
       return textVariant(readRawGroup(), 'italic');
     }
+    if (name === 'fact' || name === 'sys') {
+      return '<mtext>' + esc(readRawGroup()) + '</mtext>';
+    }
+    if (name === 'pkignore') {
+      return texMathToMathML(readRawGroup(), false);
+    }
+    if (name === 'toprule' || name === 'midrule' || name === 'bottomrule'
+        || name === 'hline') {
+      return '';
+    }
     if (name === 'left' || name === 'right') {
       // \left( \right)：当普通括号处理
       while (i < s.length && /\s/.test(s[i])) i += 1;
@@ -2394,8 +2426,21 @@ function latexInline(text) {
   s = s.replace(/\\texttt\{([^{}]*)\}/g, '<code>$1</code>');
   s = s.replace(/\\underline\{([^{}]*)\}/g, '<u>$1</u>');
   s = s.replace(/\\footnote\{([^{}]*)\}/g, '<span class="tex-fn">（$1）</span>');
-  s = s.replace(/\\cite\{([^{}]*)\}/g, '<span class="tex-cite">[$1]</span>');
-  s = s.replace(/\\ref\{([^{}]*)\}/g, '<span class="tex-ref">($1)</span>');
+  s = s.replace(/\\(?:cite|citep|citet|parencite|textcite|Cite|citeauthor)\{([^{}]*)\}/g,
+    '<span class="tex-cite">[$1]</span>');
+  s = s.replace(/\\(?:ref|autoref|cref|Cref|eqref|pageref)\{([^{}]*)\}/g,
+    '<span class="tex-ref">($1)</span>');
+  s = s.replace(/\\sys\{([^{}]*)\}/g, '<span class="tex-sys">sys($1)</span>');
+  s = s.replace(/\\checkmark\b/g, '✓');
+  s = s.replace(/\\(toprule|midrule|bottomrule|hline)\b/g, '');
+  s = s.replace(/\\(begin|end)\{[^{}]*\}/g, '');
+  s = s.replace(/\\pkignore\{([^{}]*)\}/g, '$1');
+  s = s.replace(/\\input\{([^{}]*)\}/g, '<span class="tex-input">（含 $1）</span>');
+  s = s.replace(/\\href\{[^{}]*\}\{([^{}]*)\}/g, '$1');
+  s = s.replace(/\\url\{([^{}]*)\}/g, '<span class="tex-url">$1</span>');
+  s = s.replace(/\\verb\|([^|]*)\|/g, '<code>$1</code>');
+  s = s.replace(/\\(?:noindent|centering|footnotesize|small|large|Large|normalsize|par|medskip|smallskip|bigskip|newpage|clearpage|maketitle|tableofcontents)\b/g, '');
+  s = s.replace(/\\(?:vspace|hspace|setlength|thispagestyle|pagestyle|bibliography|bibliographystyle)\*?\{[^{}]*\}(?:\{[^{}]*\})?/g, '');
   s = s.replace(/\\fact\{([^{}]*)\}/g, '<span class="tex-fact">$1</span>');
   s = s.replace(/\\label\{[^{}]*\}/g, '');
   s = s.replace(/\\([%&_#{}])/g, '$1');
@@ -2439,6 +2484,9 @@ function latexToHtml(source) {
     if ((m = /^\\subsubsection\*?\{(.+)\}/.exec(line))) {
       out.push('<h4>' + latexInline(m[1]) + '</h4>'); i += 1; continue;
     }
+    if ((m = /^\\paragraph\*?\{(.+)\}/.exec(line))) {
+      out.push('<h5>' + latexInline(m[1]) + '</h5>'); i += 1; continue;
+    }
     if (/^\\begin\{itemize\}/.test(line) || /^\\begin\{enumerate\}/.test(line)) {
       const ordered = /^\\begin\{enumerate\}/.test(line);
       const items = [];
@@ -2455,9 +2503,10 @@ function latexToHtml(source) {
         '</' + (ordered ? 'ol' : 'ul') + '>');
       continue;
     }
-    if (/^\\begin\{equation\}/.test(line) || /^\\begin\{align\}/.test(line)
-        || line === '\\[') {
-      const close = line === '\\[' ? '\\]' : /equation/.test(line) ? '\\end{equation}' : '\\end{align}';
+    if (/^\\begin\{(equation|align)\*?\}/.test(line) || line === '\\[') {
+      const starred = /\*\}/.test(line);
+      const close = line === '\\[' ? '\\]'
+        : (/equation/.test(line) ? '\\end{equation}' : '\\end{align}').replace('}', starred ? '*}' : '}');
       const body = [];
       i += 1;
       while (i < lines.length && lines[i].trim() !== close) { body.push(lines[i]); i += 1; }
@@ -2502,11 +2551,11 @@ function latexToHtml(source) {
       }
       continue;
     }
-    if (/^\\begin\{figure\}/.test(line)) {
+    if (/^\\begin\{figure\*?\}/.test(line)) {
       let graphic = '';
       let caption = '';
       i += 1;
-      while (i < lines.length && !/^\\end\{figure\}/.test(lines[i].trim())) {
+      while (i < lines.length && !/^\\end\{figure\*?\}/.test(lines[i].trim())) {
         const row = lines[i].trim();
         const g = /\\includegraphics(?:\[[^\]]*\])?\{([^{}]*)\}/.exec(row);
         if (g) graphic = g[1];
@@ -2519,8 +2568,69 @@ function latexToHtml(source) {
         (caption ? '<figcaption>' + latexInline(caption) + '</figcaption>' : '') + '</figure>');
       continue;
     }
-    if (/^\\begin\{table\}/.test(line)) { i += 1; continue; }
-    if (/^\\end\{table\}/.test(line)) { i += 1; continue; }
+    if (/^\\begin\{table\*?\}/.test(line)) {
+      let caption = '';
+      let tableHtml = '';
+      i += 1;
+      while (i < lines.length && !/^\\end\{table\*?\}/.test(lines[i].trim())) {
+        const row = lines[i].trim();
+        const c = /\\caption\{([^{}]*)\}/.exec(row);
+        if (c) caption = c[1];
+        if (/^\\begin\{tabular\}/.test(row)) {
+          const rows = [];
+          i += 1;
+          while (i < lines.length && !/^\\end\{tabular\}/.test(lines[i].trim())) { rows.push(lines[i]); i += 1; }
+          const cells = rows.map((r) => r.replace(/\\(toprule|midrule|bottomrule|hline)/g, '')).join(' ')
+            .split(/\\\\/).map((r) => r.trim()).filter(Boolean)
+            .map((r) => r.split('&').map((cell) => cell.trim()));
+          if (cells.length) {
+            tableHtml = '<table class="tex-table">' +
+              (caption ? '<caption>' + latexInline(caption) + '</caption>' : '') +
+              '<thead><tr>' + cells[0].map((cell) => '<th>' + latexInline(cell) + '</th>').join('') +
+              '</tr></thead><tbody>' +
+              cells.slice(1).map((r) => '<tr>' + r.map((cell) => '<td>' + latexInline(cell) + '</td>').join('') + '</tr>').join('') +
+              '</tbody></table>';
+            caption = '';
+          }
+        }
+        i += 1;
+      }
+      i += 1;
+      if (tableHtml) out.push(tableHtml);
+      else if (caption) out.push('<p class="tex-caption">' + latexInline(caption) + '</p>');
+      continue;
+    }
+    if (/^\\end\{table\*?\}/.test(line)) { i += 1; continue; }
+
+    if (/^\\begin\{(abstract|quote|quotation)\}/.test(line)) {
+      const env = /^\\begin\{(abstract|quote|quotation)\}/.exec(line)[1];
+      const close = '\\end{' + env + '}';
+      const body = [];
+      i += 1;
+      while (i < lines.length && lines[i].trim() !== close) { body.push(lines[i]); i += 1; }
+      i += 1;
+      const inner = latexToHtml(body.join('\n'));
+      out.push(env === 'abstract'
+        ? '<div class="tex-abstract"><h3>摘要</h3>' + inner + '</div>'
+        : '<blockquote>' + inner + '</blockquote>');
+      continue;
+    }
+
+    if (/^\\begin\{description\}/.test(line)) {
+      const items = [];
+      i += 1;
+      while (i < lines.length && !/^\\end\{description\}/.test(lines[i].trim())) {
+        const row = lines[i].trim();
+        const mm = /^\\item\[([^\]]*)\]\s*(.*)$/.exec(row);
+        if (mm) items.push('<dt>' + latexInline(mm[1]) + '</dt><dd>' + latexInline(mm[2]) + '</dd>');
+        else if (row && items.length) items[items.length - 1] += latexInline(row);
+        i += 1;
+      }
+      i += 1;
+      out.push('<dl class="tex-desc">' + items.join('') + '</dl>');
+      continue;
+    }
+    if (/^\\(begin|end)\{/.test(line)) { i += 1; continue; }
     // 普通段落：一直收，直到空行或下一个块
     const para = [line];
     i += 1;
@@ -2901,6 +3011,12 @@ function renderWorkbenchFacts() {
   }
   const form = $('#wb-fact-form');
   if (form) form.hidden = Boolean(project?.read_only);
+  // 只读工作台：追加事实要写盘，右上角的入口一并灰掉并说清原因。
+  const addBtn = $('#btn-wb-fact-add');
+  if (addBtn) {
+    addBtn.disabled = Boolean(project?.read_only);
+    addBtn.title = project?.read_only ? t('wb.readOnly') : '';
+  }
   const box = $('#wb-facts');
   if (!box) return;
   if (!facts.length) {
@@ -2911,6 +3027,17 @@ function renderWorkbenchFacts() {
     facts.map((f) => '<tr><td>' + esc(f.id) + '</td><td>' + esc(f.claim) +
       '</td><td class="code">' + esc(f.value) + '</td><td class="code">' + esc(f.source) +
       '</td></tr>').join('') + '</tbody></table>';
+}
+
+/** 事实账右上角：展开追加事实的表单，滚过去并把焦点放到 ID 栏。 */
+function openFactForm() {
+  const card = $('#wb-fact-card');
+  if (card) {
+    card.open = true;
+    card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  const id = $('#wb-fact-id');
+  if (id) id.focus();
 }
 
 async function addWorkbenchFact(event) {
@@ -3037,6 +3164,12 @@ function renderWorkbenchReports() {
     btn.title = !hasReport ? '先让实验产出一份 report.toml（experiments/*/reports/）'
       : (needsWrite && readOnly ? '启动时没加 --allow-write' : '');
   }
+  // 新建模板要写盘：只读工作台不许点。
+  const newBtn = $('#btn-report-new');
+  if (newBtn) {
+    newBtn.disabled = readOnly;
+    newBtn.title = readOnly ? '启动时没加 --allow-write' : '';
+  }
   renderReportState(selectedReport());
   renderReportCard(selectedReport(), list.length);
 }
@@ -3093,6 +3226,45 @@ async function loadWorkbenchReports() {
   renderWorkbenchReports();
 }
 
+/** 今天的日期串：report-YYYYMMDD。 */
+function reportIdStamp() {
+  const now = new Date();
+  const ymd = String(now.getFullYear())
+    + String(now.getMonth() + 1).padStart(2, '0')
+    + String(now.getDate()).padStart(2, '0');
+  return 'report-' + ymd;
+}
+
+/**
+ * 报告页右上角：新建一份报告模板。
+ *
+ * 报告下拉空着是因为报告由实验脚本产出；这里给一个起点——
+ * 在工作区的 reports/ 下写一份带注释的 toml，人填完 metrics 就能走
+ * 「检查 → 封存 → 签收 → 导入」。
+ */
+async function newReportTemplate() {
+  const raw = prompt(t('report.newPrompt'), reportIdStamp());
+  if (raw === null) return;
+  const id = String(raw).trim();
+  if (!id) {
+    toast(t('report.newNeedId'));
+    return;
+  }
+  const data = await api(wb('/reports/template'), {
+    method: 'POST',
+    body: JSON.stringify({ id }),
+  });
+  await loadWorkbenchReports();
+  // 选中新报告：一眼看到自己刚建的那份。
+  const select = $('#wb-report-select');
+  if (select && data.path) select.value = data.path;
+  renderReportState(selectedReport());
+  renderReportCard(selectedReport(), (state.wbReports?.reports || []).length);
+  const el = $('#wb-report-state');
+  if (el) el.textContent = t('report.templateCreated');
+  toast(t('report.templateCreated'));
+}
+
 // ------------------------------------------------------------------ 引用页
 //
 // 多个 bib 汇总 + 每条的状态。只读：这里不编辑 bib，也不联网核对
@@ -3126,6 +3298,13 @@ function renderCitations() {
   const data = state.wbCitations || {};
   const rows = data.entries || [];
   const files = data.files || [];
+  const readOnly = Boolean(state.workbenchProject?.read_only);
+  // 只读工作台：改 bib 要写盘，添加与删除都灰掉并说清原因。
+  const addBtn = $('#btn-cite-add');
+  if (addBtn) {
+    addBtn.disabled = readOnly;
+    addBtn.title = readOnly ? t('wb.readOnly') : '';
+  }
   for (const btn of $$('.cite-filter')) {
     const on = (btn.dataset.filter || 'all') === state.citeFilter;
     btn.classList.toggle('is-active', on);
@@ -3155,23 +3334,23 @@ function renderCitations() {
   const tbody = $('#cite-tbody');
   if (!tbody) return;
   if (!state.workbenchProject) {
-    tbody.innerHTML = '<tr class="table-empty-row"><td colspan="5">' +
+    tbody.innerHTML = '<tr class="table-empty-row"><td colspan="6">' +
       esc(t('cite.needProject')) + '</td></tr>';
     return;
   }
   if (data.error) {
-    tbody.innerHTML = '<tr class="table-empty-row"><td colspan="5">' +
+    tbody.innerHTML = '<tr class="table-empty-row"><td colspan="6">' +
       esc(t('cite.error') + data.error) + '</td></tr>';
     return;
   }
   if (!files.length) {
-    tbody.innerHTML = '<tr class="table-empty-row"><td colspan="5">' +
+    tbody.innerHTML = '<tr class="table-empty-row"><td colspan="6">' +
       esc(t('cite.empty')) + '</td></tr>';
     return;
   }
   const shown = citeFiltered(data);
   if (!shown.length) {
-    tbody.innerHTML = '<tr class="table-empty-row"><td colspan="5">' +
+    tbody.innerHTML = '<tr class="table-empty-row"><td colspan="6">' +
       esc(t('cite.none')) + '</td></tr>';
     return;
   }
@@ -3188,6 +3367,10 @@ function renderCitations() {
       + '<td class="mono">' + esc(id || '—') + '</td>'
       + '<td class="cell-num">' + esc(String(r.used ?? 0)) + '</td>'
       + '<td>' + citeStatusChip(r.status) + '</td>'
+      + '<td class="cite-act">'
+      + '<button class="btn btn-danger cite-del" type="button" data-cite-delete="'
+      + esc(r.key) + '"' + (readOnly ? ' disabled' : '') + '>'
+      + esc(t('btn.delete')) + '</button></td>'
       + '</tr>';
   }).join('');
 }
@@ -3206,6 +3389,55 @@ async function loadCitations() {
     state.citeLoading = false;
   }
   renderCitations();
+}
+
+/** 引用页右上角：展开添加引用的内联表单。 */
+function openCiteForm() {
+  const form = $('#cite-form');
+  if (form) form.hidden = false;
+  const key = $('#cite-key');
+  if (key) key.focus();
+}
+
+/** 收起添加引用的表单（取消 / 提交完都走这里）。 */
+function closeCiteForm() {
+  const form = $('#cite-form');
+  if (form) form.hidden = true;
+}
+
+/** 提交：把这一条追加到项目的 cfg.bib（后端原子写），然后刷新列表。 */
+async function addCitation(event) {
+  event.preventDefault();
+  const body = {
+    key: ($('#cite-key')?.value || '').trim(),
+    title: ($('#cite-title')?.value || '').trim(),
+    author: ($('#cite-author')?.value || '').trim(),
+    year: ($('#cite-year')?.value || '').trim(),
+    doi: ($('#cite-doi')?.value || '').trim(),
+    arxiv: ($('#cite-arxiv')?.value || '').trim(),
+  };
+  if (!body.key) throw new Error(t('cite.needKey'));
+  await api(wb('/citations/add'), {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  const form = $('#cite-form');
+  if (form) form.reset();
+  closeCiteForm();
+  await loadCitations();
+  toast(t('cite.added'));
+}
+
+/** 删一条：先问人，确认了才调接口（删 bib 里的东西不是能顺手做的事）。 */
+async function deleteCitation(key) {
+  if (!key) return;
+  if (!confirm(tf('cite.confirmDelete', { key }))) return;
+  await api(wb('/citations/delete'), {
+    method: 'POST',
+    body: JSON.stringify({ key }),
+  });
+  await loadCitations();
+  toast(t('cite.deleted'));
 }
 
 const REPORT_ACTION_LABEL = {
@@ -3460,6 +3692,30 @@ function wire() {
       renderCitations();
     });
   }
+  // 引用页右上角：展开添加引用的内联表单。
+  $('#btn-cite-add').addEventListener('click', openCiteForm);
+  $('#btn-cite-cancel').addEventListener('click', closeCiteForm);
+  $('#cite-form').addEventListener('submit', (e) => {
+    addCitation(e).catch((err) => {
+      const note = $('#cite-result');
+      if (note) note.textContent = t('cite.error') + err.message;
+      toast(t('cite.error') + err.message);
+    });
+  });
+  // 引用页每行的删除按钮：确认后才真删。
+  $('#cite-tbody').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-cite-delete]');
+    if (!btn) return;
+    deleteCitation(btn.dataset.citeDelete).catch((err) => {
+      toast(t('cite.error') + err.message);
+    });
+  });
+  // 事实账右上角：展开追加事实的表单。
+  $('#btn-wb-fact-add').addEventListener('click', openFactForm);
+  // 报告页右上角：新建一份报告模板。
+  $('#btn-report-new').addEventListener('click', () => {
+    newReportTemplate().catch((e) => toast('新建报告模板失败：' + e.message));
+  });
 
   // 侧栏底部：语言 / 主题。点一下就换，并且记住（刷新后还在）。
   $('#btn-lang-zh').addEventListener('click', () => setLang('zh'));

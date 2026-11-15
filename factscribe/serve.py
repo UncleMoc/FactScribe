@@ -26,6 +26,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 from .citeview import citations_data
+from .citeedit import citation_add_data, citation_delete_data
 from .config import ConfigError, load_config
 from .pdfmap import locate, section_title
 from .projects import (ProjectCreateError, create_project, factscribe_dir,
@@ -34,7 +35,7 @@ from .projects import (ProjectCreateError, create_project, factscribe_dir,
                        upsert_project, write_registry)
 from .constants import EXIT_OK, VERSION
 from .report import ReportError, _payload, _severity_of
-from .reportapi import report_action_data, reports_data
+from .reportapi import report_action_data, reports_data, report_template_data
 from .samples import SampleError, install_guide_sample, is_guide_path
 from .workbench import (SectionError, add_fact_data, audit_data, brief_data,
                         create_section_data, delete_section_data,
@@ -63,6 +64,18 @@ ASSET_CONTENT_TYPES = {
 }
 # 单个文件的上限：20 MiB。超了就是 400，不给读。
 ASSET_MAX_BYTES = 20 * 1024 * 1024
+
+# 错误码 → HTTP 状态码。默认 400（参数不对）；下面几类另说：
+#   READ_ONLY       403  只读工作台，不许写盘
+#   REPORT_EXISTS   409  目标报告已存在
+#   CITATION_EXISTS 409  这个引用 key 已经有了
+#   CITATION_MISSING 404 找不到这条引用
+_STATUS_BY_CODE = {
+    "READ_ONLY": 403,
+    "REPORT_EXISTS": 409,
+    "CITATION_EXISTS": 409,
+    "CITATION_MISSING": 404,
+}
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -151,6 +164,11 @@ class _Handler(BaseHTTPRequestHandler):
         payload["ok"] = True
         return payload
 
+    def _fail_config(self, exc: ConfigError) -> None:
+        """配置/用法层面的失败：状态码由错误码决定（默认 400）。"""
+        code = getattr(exc, "code", "CONFIG_INVALID")
+        self._error(_STATUS_BY_CODE.get(code, 400), code, str(exc))
+
     # ------------------------------------------------------------------ routes
 
     def do_GET(self) -> None:  # noqa: N802 - stdlib signature
@@ -224,8 +242,7 @@ class _Handler(BaseHTTPRequestHandler):
                 return
             self._error(404, "NOT_FOUND", "没有这个接口：%s" % path)
         except ConfigError as exc:
-            code = getattr(exc, "code", "CONFIG_INVALID")
-            self._error(403 if code == "READ_ONLY" else 400, code, str(exc))
+            self._fail_config(exc)
         except ReportError as exc:
             # 报告层的失败（路径越界、没过 check、锁对不上……）：400 + 机器码。
             self._error(400, exc.code, exc.message)
@@ -290,6 +307,31 @@ class _Handler(BaseHTTPRequestHandler):
                     self.server.allow_write)  # type: ignore[attr-defined]
                 self._send(200, self._base("reports_action", **data))
                 return
+            if path == "/api/reports/template":
+                # 新建报告模板：在工作区的 reports/ 下写一份带注释的模板。
+                # 要写盘，所以只读工作台会拿到 403 READ_ONLY。
+                body = self._body()
+                data = report_template_data(
+                    self._project(), body,
+                    self.server.allow_write)  # type: ignore[attr-defined]
+                self._send(200, self._base("reports_template", **data))
+                return
+            if path == "/api/citations/add":
+                # 追加一条引用到项目的 cfg.bib（原子写）。
+                body = self._body()
+                data = citation_add_data(
+                    self._project(), body,
+                    self.server.allow_write)  # type: ignore[attr-defined]
+                self._send(200, self._base("citations_add", **data))
+                return
+            if path == "/api/citations/delete":
+                # 删掉 bib 里的某一条（按 key 定位行范围，原子写回）。
+                body = self._body()
+                data = citation_delete_data(
+                    self._project(), body,
+                    self.server.allow_write)  # type: ignore[attr-defined]
+                self._send(200, self._base("citations_delete", **data))
+                return
             if path == "/api/build":
                 self._build()
                 return
@@ -304,8 +346,7 @@ class _Handler(BaseHTTPRequestHandler):
             # 示例安装：500 = 包里没有示例 / 复制失败。
             self._error(exc.status, exc.code, str(exc))
         except ConfigError as exc:
-            code = getattr(exc, "code", "CONFIG_INVALID")
-            self._error(403 if code == "READ_ONLY" else 400, code, str(exc))
+            self._fail_config(exc)
         except ReportError as exc:
             # 报告层的失败（路径越界、没过 check、锁对不上……）：400 + 机器码。
             self._error(400, exc.code, exc.message)
@@ -325,8 +366,7 @@ class _Handler(BaseHTTPRequestHandler):
                 return
             self._error(404, "NOT_FOUND", "没有这个接口：%s" % path)
         except ConfigError as exc:
-            code = getattr(exc, "code", "CONFIG_INVALID")
-            self._error(403 if code == "READ_ONLY" else 400, code, str(exc))
+            self._fail_config(exc)
         except ReportError as exc:
             # 报告层的失败（路径越界、没过 check、锁对不上……）：400 + 机器码。
             self._error(400, exc.code, exc.message)
@@ -700,8 +740,7 @@ class _Handler(BaseHTTPRequestHandler):
                 return
             self._error(404, "NOT_FOUND", "没有这个接口：%s" % path)
         except ConfigError as exc:
-            code = getattr(exc, "code", "CONFIG_INVALID")
-            self._error(403 if code == "READ_ONLY" else 400, code, str(exc))
+            self._fail_config(exc)
         except ReportError as exc:
             # 报告层的失败（路径越界、没过 check、锁对不上……）：400 + 机器码。
             self._error(400, exc.code, exc.message)

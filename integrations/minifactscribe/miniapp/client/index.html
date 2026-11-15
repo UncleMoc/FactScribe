@@ -173,13 +173,13 @@
                 <div class="panel-actions">
                   <span id="wb-audit-meta" class="muted-note"></span>
                   <button id="btn-wb-open-browser" class="btn" type="button" hidden>在浏览器打开</button>
-                  <button id="btn-workbench-audit" class="btn" type="button" data-i18n="btn.wbAudit">用工作台审计</button>
                 </div>
               </div>
               <!-- 问题面板：审计问题列表（含「跳到那一行」）。 -->
               <div id="wb-side-issues" class="wb-side-panel">
                 <div class="side-freeze-row">
                   <span id="wb-evidence-meta" class="muted-note"></span>
+                  <button id="btn-workbench-audit" class="btn" type="button" data-i18n="btn.wbAudit">运行审计</button>
                   <button id="btn-wb-freeze" class="btn" type="button"
                     title="冻结项目的证据清单（不是只冻结这一节）" data-i18n="btn.freeze">冻结证据</button>
                   <button id="btn-wb-unfreeze" class="btn" type="button"
@@ -215,6 +215,7 @@
             </div>
             <div class="panel-actions">
               <span id="wb-facts-count" class="muted-note"></span>
+              <button id="btn-wb-fact-add" class="btn" type="button" data-i18n="btn.appendFact">追加事实</button>
             </div>
           </div>
           <div id="wb-facts" class="wb-facts"></div>
@@ -255,6 +256,7 @@
             </div>
             <div class="panel-actions">
               <span id="wb-reports-meta" class="muted-note"></span>
+              <button id="btn-report-new" class="btn" type="button" data-i18n="btn.newReportTemplate">新建报告模板</button>
             </div>
           </div>
           <div id="wb-reports" class="wb-reports"></div>
@@ -284,8 +286,22 @@
             </div>
             <div class="panel-actions">
               <span id="cite-summary" class="muted-note" role="status" aria-live="polite"></span>
+              <button id="btn-cite-add" class="btn" type="button" data-i18n="btn.addCitation">添加引用</button>
             </div>
           </div>
+          <form id="cite-form" class="cite-form" hidden>
+            <label class="field">Key<input id="cite-key" required /></label>
+            <label class="field">标题<input id="cite-title" /></label>
+            <label class="field">作者<input id="cite-author" /></label>
+            <label class="field">年份<input id="cite-year" /></label>
+            <label class="field">DOI<input id="cite-doi" /></label>
+            <label class="field">arXiv<input id="cite-arxiv" /></label>
+            <div class="panel-actions">
+              <button id="btn-cite-save" class="btn btn-primary" type="submit" data-i18n="btn.addCitation">添加引用</button>
+              <button id="btn-cite-cancel" class="btn" type="button" data-i18n="btn.cancel">取消</button>
+            </div>
+            <div id="cite-result" class="muted-note"></div>
+          </form>
           <div id="cite-filters" class="cite-filters" role="group" aria-label="按状态过滤">
             <button id="cite-filter-all" class="cite-filter is-active" type="button" data-filter="all" aria-pressed="true" data-i18n="cite.filterAll">全部</button>
             <button id="cite-filter-no-id" class="cite-filter" type="button" data-filter="no-id" aria-pressed="false" data-i18n="cite.filterNoId">缺标识</button>
@@ -302,6 +318,7 @@
                   <th scope="col" data-i18n="th.identifier">DOI / arXiv</th>
                   <th scope="col" data-i18n="th.citeCount">引用次数</th>
                   <th scope="col" data-i18n="th.status">状态</th>
+                  <th scope="col" data-i18n="th.action">操作</th>
                 </tr>
               </thead>
               <tbody id="cite-tbody"></tbody>
