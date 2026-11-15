@@ -101,7 +101,7 @@ after(async () => {
 test('项目登记册路由：加入、列出、移除', async () => {
   const project = join(home, 'paper-one');
   mkdirSync(project, { recursive: true });
-  writeFileSync(join(project, 'paperkit.toml'), '[project]\ntitle = "第一篇"\n', 'utf8');
+  writeFileSync(join(project, 'factscribe.toml'), '[project]\ntitle = "第一篇"\n', 'utf8');
 
   let res = await call('/api/projects');
   assert.equal(res.status, 200);
@@ -133,7 +133,7 @@ test('启动前重新校验：不是论文项目就 400，不进 spawn', async (
   });
   assert.equal(res.status, 400);
   assert.equal(res.body.error.code, 'PROJECT_INVALID');
-  assert.match(res.body.error.message, /paperkit\.toml/);
+  assert.match(res.body.error.message, /factscribe\.toml/);
 
   const missing = await call('/api/workbench/start', {
     method: 'POST',
@@ -416,7 +416,7 @@ test('示例论文：还没连工作台时也让 Python 装一份（兜底）', 
   assert.equal(res.body.ok, true);
   assert.match(res.body.path, /[/\\]samples[/\\]guide$/);
   assert.equal(res.body.created, true);
-  assert.ok(existsSync(join(res.body.path, 'paperkit.toml')), '示例要真的落地');
+  assert.ok(existsSync(join(res.body.path, 'factscribe.toml')), '示例要真的落地');
   assert.ok(existsSync(join(res.body.path, 'sections')), '示例要带着章节');
 
   const again = await call('/api/workbench/samples/guide', {

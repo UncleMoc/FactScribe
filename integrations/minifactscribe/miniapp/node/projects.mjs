@@ -1,6 +1,7 @@
 // 论文项目登记册：文件夹就是项目。
 //
-// 一个论文项目＝一个含 `paperkit.toml` 的文件夹。这里只登记「哪些文件夹是论文项目」
+// 一个论文项目＝一个含 `factscribe.toml` 的文件夹。
+// 这里只登记「哪些文件夹是论文项目」
 // 和「上次用哪个」，不复制正文、不写项目文件夹。
 //
 // 落盘位置固定为 `~/.factscribe/projects.json`（不是 dataDir）：dataDir 由宿主创建、
@@ -13,7 +14,12 @@ import { isAbsolute, join, resolve } from 'node:path';
 
 export const REGISTRY_VERSION = 1;
 export const MAX_PROJECTS = 30;
-export const CONFIG_NAME = 'paperkit.toml';
+export const CONFIG_NAME = 'factscribe.toml';
+
+/** 项目自己的声明文件：factscribe.toml。 */
+export function configFilePath(dir) {
+  return join(dir, CONFIG_NAME);
+}
 
 export function homeDir(explicit) {
   return String(explicit || process.env.HOME || homedir());
@@ -102,7 +108,7 @@ export function readProjectName(dir) {
   const fallback = String(dir).split('/').filter(Boolean).pop() || String(dir);
   let text = '';
   try {
-    text = readTextSync(join(dir, CONFIG_NAME));
+    text = readTextSync(configFilePath(dir));
   } catch {
     return fallback;
   }
@@ -119,7 +125,7 @@ export function readProjectName(dir) {
 export function readProjectDescription(dir) {
   let text = '';
   try {
-    text = readTextSync(join(dir, CONFIG_NAME));
+    text = readTextSync(configFilePath(dir));
   } catch {
     return '';
   }

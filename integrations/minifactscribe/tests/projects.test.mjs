@@ -20,12 +20,12 @@ function tempHome() {
 function makeProject(root, title) {
   const dir = join(root, 'paper-' + Math.random().toString(36).slice(2, 8));
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, 'paperkit.toml'),
+  writeFileSync(join(dir, 'factscribe.toml'),
     '[project]\ntitle = "' + title + '"\nauthors = ["测试"]\nbuild = "true"\n', 'utf8');
   return dir;
 }
 
-test('文件夹就是项目：认 paperkit.toml，缺了就不是项目', () => {
+test('文件夹就是项目：认 factscribe.toml，缺了就不是项目', () => {
   const home = tempHome();
   const good = makeProject(home, '我的论文');
   // macOS 的 /var 是 /private/var 的软链；登记册存真实路径
@@ -33,7 +33,7 @@ test('文件夹就是项目：认 paperkit.toml，缺了就不是项目', () => 
 
   const bare = join(home, 'not-a-project');
   mkdirSync(bare, { recursive: true });
-  assert.throws(() => resolveProjectDir(bare, home), /不是论文项目：缺 paperkit\.toml/);
+  assert.throws(() => resolveProjectDir(bare, home), /不是论文项目：缺 factscribe\.toml/);
   assert.throws(() => resolveProjectDir(join(home, 'nope'), home), /文件夹不存在/);
   assert.throws(() => resolveProjectDir('relative/dir', home), /绝对路径/);
   assert.throws(() => resolveProjectDir('', home), /请填论文项目文件夹/);
@@ -44,7 +44,7 @@ test('项目名读 [project] title，读不到用文件夹名', () => {
   const home = tempHome();
   const dir = join(home, 'untitled-folder');
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, 'paperkit.toml'), '[project]\nauthors = ["x"]\n', 'utf8');
+  writeFileSync(join(dir, 'factscribe.toml'), '[project]\nauthors = ["x"]\n', 'utf8');
   assert.equal(readProjectName(dir), 'untitled-folder');
   assert.equal(readProjectName(join(home, 'missing')), 'missing');
   rmSync(home, { recursive: true, force: true });

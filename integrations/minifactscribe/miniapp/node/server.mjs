@@ -486,7 +486,7 @@ export async function start(context) {
             return;
           }
           if (request.method === 'POST' && path === '/api/workbench/projects/update') {
-            // 改项目名与简介：写登记册 + paperkit.toml，同样只有 Python 会写盘。
+            // 改项目名与简介：写登记册 + factscribe.toml，同样只有 Python 会写盘。
             const body = await readBody(request);
             const upstream = await workbenchProxy(workbench.url, workbench.token,
               '/api/projects/update', 'POST', body);

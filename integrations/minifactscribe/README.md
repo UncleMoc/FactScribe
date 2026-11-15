@@ -82,7 +82,7 @@ node --test integrations/minifactscribe/tests/*.test.mjs
 
 ## 论文项目与一键启动工作台
 
-**一个文件夹就是一个论文项目**（里面有 `paperkit.toml`）。切换项目＝换文件夹；
+**一个文件夹就是一个论文项目**（里面有 `factscribe.toml`）。切换项目＝换文件夹；
 工作台的读写、审计只对当前文件夹生效。
 
 ```text
@@ -97,7 +97,7 @@ node --test integrations/minifactscribe/tests/*.test.mjs
 - 启动只跑固定命令，不经过 shell：
   `<python> -m factscribe serve <文件夹> --port 0 --json [--allow-write] [--allow-build]`；
   读首行 JSON 拿到 URL/token 后自动连接；「停止工作台」或插件退出时杀掉子进程；
-- 启动前重新校验文件夹：必须存在、是目录、含 `paperkit.toml`；
+- 启动前重新校验文件夹：必须存在、是目录、含 `factscribe.toml`；
 - 登记册在 `~/.factscribe/projects.json`（0600），不在 dataDir——重装插件还认得；
   `dataDir/workbench.json` 只存手动连接的 URL/token；
 - 一键启动的服务跟着本进程活：宿主重启后不会假装还连着；
@@ -213,7 +213,7 @@ integrations/minifactscribe/
 - 默认不联网：判定与示例论文都在本地。
 - 项目数据存在宿主分配的私有 `dataDir`，不写工作区。
 - 只连本机回环地址；token 不返回页面。一键启动只跑固定命令，项目文件夹由你指定并校验
-  （必须含 `paperkit.toml`），不写项目文件夹除非你点保存/采纳。
+  （必须含 `factscribe.toml`），不写项目文件夹除非你点保存/采纳。
 - 项目登记册在 `~/.factscribe/projects.json`：只存文件夹路径、显示名、上次使用时间，
   不存正文；你可以随时删。
 - 声明 `hostAccess: ["navigation.read"]`：只用来判断当前是不是从论文对话打开（`view`），不读对话内容。

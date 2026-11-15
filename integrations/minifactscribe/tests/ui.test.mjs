@@ -151,7 +151,7 @@ test('论文项目＝文件夹：列表、路径校验、切换即换文件夹',
   assert.match(JS, /\/api\/projects/, '项目列表走 Node 接口');
   assert.match(JS, /\/api\/workbench\/start/, '启动走 Node 接口');
   assert.match(JS, /用当前对话项目/, '应能用当前对话的文件夹');
-  assert.match(PROJECTS, /paperkit\.toml/, '校验项目必须含 paperkit.toml');
+  assert.match(PROJECTS, /factscribe\.toml/, '校验项目必须含 factscribe.toml');
   assert.match(PROJECTS, /MAX_PROJECTS/, '登记册必须有上限，不能无限长');
 });
 
