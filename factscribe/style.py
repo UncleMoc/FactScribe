@@ -775,7 +775,7 @@ def _phrase_regex(phrases: list[str]) -> re.Pattern | None:
 # --------------------------------------------------------------------------
 
 _SKIP_ENV_RE = re.compile(
-    r"\\begin\s*\{(verbatim\*?|Verbatim|lstlisting|minted|comment\*?|pkignore"
+    r"\\begin\s*\{(verbatim\*?|Verbatim|lstlisting|minted|comment\*?|fsignore"
     r"|quote|quotation|verse"
     r"|equation\*?|align\*?|gather\*?|multline\*?|eqnarray\*?|displaymath|math"
     r"|figure\*?|table\*?|tabular\*?|tabularx|thebibliography"

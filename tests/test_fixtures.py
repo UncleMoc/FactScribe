@@ -82,7 +82,7 @@ class FixtureSchemaTest(unittest.TestCase):
         for kind, case in self._cases():
             with self.subTest(case=case.name, kind=kind):
                 self.assertTrue((case / "EXPECT.json").is_file(), case)
-                self.assertTrue((case / "paperkit.toml").is_file(), case)
+                self.assertTrue((case / "factscribe.toml").is_file(), case)
                 self.assertTrue(any((case / "facts").glob("*.toml")), case)
                 self.assertTrue(any((case / "sections").glob("*.tex")), case)
 
@@ -139,8 +139,8 @@ class HostileFixtureTest(unittest.TestCase):
         """SPEC-V2.2 R-05/R-06（内部 B1）：`\\tableinput` 包装宏必须展开 → TABLE_UNBOUND（exit 5）。"""
         self._assert_hostile("R1-B1")
 
-    def test_R1_B4_pkignore_fake_conclusion(self):
-        """SPEC-V2.2 R-07（内部 B4）：`\\pkignore` 参数含数字必须红 → PKIGNORE_QUANT。"""
+    def test_R1_B4_fsignore_fake_conclusion(self):
+        """SPEC-V2.2 R-07（内部 B4）：`\\fsignore` 参数含数字必须红 → FSIGNORE_QUANT。"""
         self._assert_hostile("R1-B4")
 
     def test_R2_macro_body_escape(self):

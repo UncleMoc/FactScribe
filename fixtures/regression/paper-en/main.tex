@@ -15,9 +15,9 @@
 
 \hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
 
-% ---- paperkit 绑定宏（等价于 \input{audit/preamble}；内联以保证 clean clone 也能编） ----
+% ---- factscribe 绑定宏（等价于 \input{audit/preamble}；内联以保证 clean clone 也能编） ----
 \providecommand{\fact}[1]{}          % \fact{ID}：数字审计用，排版不产生字符
-\providecommand{\pkignore}[1]{#1}    % 显式豁免区：内容照排，不进数字审计
+\providecommand{\fsignore}[1]{#1}    % 显式豁免区：内容照排，不进数字审计
 
 \newcommand{\sys}{\textsc{Sih}}
 

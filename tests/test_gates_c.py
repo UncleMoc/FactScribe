@@ -4,7 +4,7 @@
 夹具测试证明「攻击必红、近邻必绿」；本文件锁住实现边界的单点行为：
 - 值域不再有隐式舍入（R-04 / B2）
 - BU 是句子不是行（R-02 / B3）
-- 表格闭包（R-05/R-06 / B1）、pkignore（R-07 / B4）
+- 表格闭包（R-05/R-06 / B1）、fsignore（R-07 / B4）
 - 宏体数字与算术命令（R-01A）
 - display 严格等价（R-04 / 2-B2）
 - PDF 双向多重集与 stamp 信任根（V3.0 P-02..P-08）
@@ -61,7 +61,7 @@ def make_project(tmp: str, value: str = "10/16", extra: str = "",
         dest = root / name
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(text, encoding="utf-8")
-    (root / "paperkit.toml").write_text(
+    (root / "factscribe.toml").write_text(
         '[project]\ntitle = "t"\nsections = "sections/*.tex"\n'
         'facts = "facts/*.toml"\nbib = "refs.bib"\n%s\n' % config,
         encoding="utf-8")
@@ -149,23 +149,23 @@ class TableClosureTest(unittest.TestCase):
             self.assertEqual(code, 0, data)
 
 
-class PkignoreTest(unittest.TestCase):
-    def test_quant_inside_pkignore_is_red(self):
+class FsignoreTest(unittest.TestCase):
+    def test_quant_inside_fsignore_is_red(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = make_project(
                 tmp,
                 body="We resolved 10/16\\fact{A2}. "
-                     "\\pkignore{we fabricated 99 of 100 tasks.}\n")
+                     "\\fsignore{we fabricated 99 of 100 tasks.}\n")
             code, data = audit(root)
             self.assertEqual(code, 1)
-            self.assertIn("PKIGNORE_QUANT", [i["code"] for i in data["issues"]])
+            self.assertIn("FSIGNORE_QUANT", [i["code"] for i in data["issues"]])
             self.assertEqual(data["summary"]["annotations_skipped"], 1)
 
     def test_identifier_and_table_block_are_exempt(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = make_project(
                 tmp,
-                body="\\pkignore{sphinx-10449} is excluded. We resolved 10/16\\fact{A2}.\n")
+                body="\\fsignore{sphinx-10449} is excluded. We resolved 10/16\\fact{A2}.\n")
             code, data = audit(root)
             self.assertEqual(code, 0, data)
 

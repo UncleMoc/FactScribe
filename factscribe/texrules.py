@@ -169,18 +169,18 @@ def numeric_macro_hits(tex: str, allow: list[str] | None = None) -> list[tuple[s
 
 
 # --------------------------------------------------------------------------
-# R-07：\pkignore 参数里的定量
+# R-07：\fsignore 参数里的定量
 # --------------------------------------------------------------------------
 
 _ANNOTATION_IDENT = re.compile(r"[A-Za-z][A-Za-z0-9]*(?:[-_./][A-Za-z0-9]+)+")
 _URL_RE = re.compile(r"(?:https?|ftp)://\S+")
 
 
-def pkignore_quant_hits(annotation_args) -> list[tuple[int, str, str]]:
+def fsignore_quant_hits(annotation_args) -> list[tuple[int, str, str]]:
     """[(行号, 参数字面, 命中的数字)]；表格块走 R-06 通道，不算偷渡。"""
     out = []
     for name, line, arg in annotation_args:
-        if name != "pkignore" or not arg:
+        if name != "fsignore" or not arg:
             continue
         if re.search(r"\\begin\{(?:table|tabular|longtable|tabularx)\*?\}", arg):
             continue

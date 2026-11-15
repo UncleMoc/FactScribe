@@ -4,7 +4,7 @@
   "round": "R1",
   "attack_family": "SOURCE_BINDING",
   "criteria": [
-    "V2.2 R-07（内部 B4 \\pkignore 后门）"
+    "V2.2 R-07（内部 B4 \\fsignore 后门）"
   ],
   "command": "audit",
   "exit": 0,

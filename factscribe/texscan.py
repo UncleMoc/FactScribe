@@ -58,10 +58,10 @@ _CITE_RE = re.compile(
 _FIGURE_RE = re.compile(r"\\includegraphics\*?(?:\s*\[[^\]]*\])*\s*\{([^}]*)\}")
 _BIBRES_RE = re.compile(r"\\(?:bibliography|addbibresource)\s*\{([^}]*)\}")
 
-# 整体跳过的环境：verbatim 里的 % 不是注释（红队 B3）；pkignore 是显式豁免区。
+# 整体跳过的环境：verbatim 里的 % 不是注释（红队 B3）；fsignore 是显式豁免区。
 # thebibliography：渲染的是文献表（W2/W3 白名单面），不是正文定量断言；
 # 文献里的年份/页码不能按「正文数字」判，PDF 层用白名单显式计数兜住（P-05）。
-_SKIP_ENVS = r"(?:verbatim\*?|Verbatim|lstlisting|minted|comment\*?|pkignore|thebibliography)"
+_SKIP_ENVS = r"(?:verbatim\*?|Verbatim|lstlisting|minted|comment\*?|fsignore|thebibliography)"
 _SKIP_ENV_RE = re.compile(
     r"\\begin\{(%s)\}.*?\\end\{\1\}" % _SKIP_ENVS, re.S)
 _VERB_RE = re.compile(r"\\verb\*?([^A-Za-z\s])")
@@ -106,14 +106,14 @@ def _line_of(s: str, pos: int) -> int:
 
 # 写作批注宏（v1.1）：内容是作者给作者的问题，不是正文命题。
 # 抽数字前整块剥离（连同参数），不参与审计，只计数上报。
-_ANNOTATION_CMDS = ("todoq", "todo", "pkignore", "pknote", "fixme", "note", "tbd")
+_ANNOTATION_CMDS = ("todoq", "todo", "fsignore", "pknote", "fixme", "note", "tbd")
 
 
 def _mask_envs_and_verb(tex: str) -> tuple[list, list[tuple[str, int]], list[tuple[str, int, str]]]:
-    """第一刀：verbatim/verb/pkignore 整块与写作批注宏抹掉（在剥注释之前）。
+    """第一刀：verbatim/verb/fsignore 整块与写作批注宏抹掉（在剥注释之前）。
 
     返回 (chars, annotations, annotation_args)，annotations 是 [(宏名, 行号)]，
-    annotation_args 额外带参数原文（供 R-07 的 PKIGNORE_QUANT 检查），供审计
+    annotation_args 额外带参数原文（供 R-07 的 FSIGNORE_QUANT 检查），供审计
     报告单列「已跳过 N 处批注」——跳过不等于放行，必须让人看见跳了多少。
     """
     chars = list(tex)
@@ -133,7 +133,7 @@ def _mask_envs_and_verb(tex: str) -> tuple[list, list[tuple[str, int]], list[tup
         else:
             end += 1
         _blank(chars, m.start(), end)
-    # \pkignore{...} / \todoq{...} / \todo[...]{...}：整条批注连同参数抹成空白。
+    # \fsignore{...} / \todoq{...} / \todo[...]{...}：整条批注连同参数抹成空白。
     # 行号用抹除前的文本算（结构未被改动前的位置）。
     s = "".join(chars)
     ann_re = re.compile(r"\\(%s)\b" % "|".join(_ANNOTATION_CMDS))

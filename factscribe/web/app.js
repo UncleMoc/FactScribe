@@ -252,7 +252,7 @@ const I18N = {
     'btn.npTabAdd': '加入已有文件夹',
     'btn.npJoin': '加入',
     'page.projectAdd': '加入已有文件夹',
-    'np.addDesc': '这个文件夹里要有 paperkit.toml。登记完就能在项目列表里选它。',
+    'np.addDesc': '这个文件夹里要有 factscribe.toml。登记完就能在项目列表里选它。',
     'project.current': '当前',
     'project.listEmpty': '还没有论文项目。',
     'project.actionEdit': '编辑',
@@ -405,7 +405,7 @@ const I18N = {
     'btn.npTabAdd': 'Add existing folder',
     'btn.npJoin': 'Add',
     'page.projectAdd': 'Add existing folder',
-    'np.addDesc': 'The folder must contain paperkit.toml. Once registered you can pick it in the project list.',
+    'np.addDesc': 'The folder must contain factscribe.toml. Once registered you can pick it in the project list.',
     'project.current': 'Current',
     'project.listEmpty': 'No project yet.',
     'project.actionEdit': 'Edit',
@@ -1338,7 +1338,7 @@ async function copyProjectPath(path) {
   }
 }
 
-/** 保存编辑：改登记册的 name/description，并写进项目自己的 paperkit.toml。 */
+/** 保存编辑：改登记册的 name/description，并写进项目自己的 factscribe.toml。 */
 async function saveProjectEdit(path) {
   const box = $$('.project-edit').find((el) => el.dataset.path === path);
   if (!box) return;
@@ -2332,7 +2332,7 @@ function texMathParse(src) {
     if (name === 'fact' || name === 'sys') {
       return '<mtext>' + esc(readRawGroup()) + '</mtext>';
     }
-    if (name === 'pkignore') {
+    if (name === 'fsignore') {
       return texMathToMathML(readRawGroup(), false);
     }
     if (name === 'toprule' || name === 'midrule' || name === 'bottomrule'
@@ -2434,7 +2434,7 @@ function latexInline(text) {
   s = s.replace(/\\checkmark\b/g, '✓');
   s = s.replace(/\\(toprule|midrule|bottomrule|hline)\b/g, '');
   s = s.replace(/\\(begin|end)\{[^{}]*\}/g, '');
-  s = s.replace(/\\pkignore\{([^{}]*)\}/g, '$1');
+  s = s.replace(/\\fsignore\{([^{}]*)\}/g, '$1');
   s = s.replace(/\\input\{([^{}]*)\}/g, '<span class="tex-input">（含 $1）</span>');
   s = s.replace(/\\href\{[^{}]*\}\{([^{}]*)\}/g, '$1');
   s = s.replace(/\\url\{([^{}]*)\}/g, '<span class="tex-url">$1</span>');

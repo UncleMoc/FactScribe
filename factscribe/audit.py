@@ -21,7 +21,7 @@ from .evidence import CHANGED_CODE, UNFROZEN_CODE, lock_check, unfrozen_info
 from .facts import (Fact, ExprError, _cycles, _declared_number, canon_text,
                     eval_expr, literal_tokens, number_key, sha256_file)
 from .texrules import (adjacency_hits, arith_hits, display_hits,
-                       numeric_macro_hits, pkignore_quant_hits,
+                       fsignore_quant_hits, numeric_macro_hits,
                        tabular_regions)
 from .texscan import (_balanced, _blank, _extract_numbers,
                       _merge_number_units, has_auditable_content, scan_tex,
@@ -159,10 +159,10 @@ def _source_rule_issues(cfg: Config, sections) -> list[Issue]:
                 "宏 \\%s 的定义体携带数字（%r）——宏可以携带 fact id，不可以携带数字"
                 "（R-01A-B；确属布局宏请进 project.numeric_macro_allow 人签登记）"
                 % (name, digit), location="%s:%s" % (rel, line), token="\\" + name))
-        for line, arg, hits in pkignore_quant_hits(scan_tex(text).annotation_args):
+        for line, arg, hits in fsignore_quant_hits(scan_tex(text).annotation_args):
             out.append(Issue(
-                "PKIGNORE_QUANT",
-                "\\pkignore 参数里出现定量（%s）——豁免宏不得用来抹掉结论句：%r"
+                "FSIGNORE_QUANT",
+                "\\fsignore 参数里出现定量（%s）——豁免宏不得用来抹掉结论句：%r"
                 % (hits, arg), location="%s:%s" % (rel, line), token=hits))
     return out
 
