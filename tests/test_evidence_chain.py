@@ -51,7 +51,7 @@ def make_project(tmp: str, *, source: bool = True, sha: bool = True,
     data.write_text(SUMMARY, encoding="utf-8")
     digest = hashlib.sha256(data.read_bytes()).hexdigest()
     lines = [
-        'schema = "paperkit-fact/3.0"',
+        'schema = "factscribe-fact/3.0"',
         "[[fact]]",
         'id = "A1"',
         'claim = "On assembly, the rate is 62.5%."',

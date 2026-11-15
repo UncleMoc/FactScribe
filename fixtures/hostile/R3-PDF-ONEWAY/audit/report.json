@@ -33,7 +33,7 @@
   "pdf_whitelist": [],
   "report_sha256": "sha256:6f0e96943764e16a8f01aa8b6334467e4a8da26513b852a65cd2477549cf1db6",
   "rules_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
-  "schema": "paperkit-report/3.0",
+  "schema": "factscribe-report/3.0",
   "signers": [],
   "signing_boundary": "key_only",
   "signing_mode": "offline_manifest",

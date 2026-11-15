@@ -81,7 +81,7 @@ class TestThreeShapes(unittest.TestCase):
             cfg = load_config(write_base(Path(tmp), PROJECT_ROOT))
             self.assertTrue(cfg.is_v3)
             self.assertEqual(cfg.config_shape, "project-root")
-            self.assertEqual(cfg.schema, "paperkit-project/3.0")   # 缺省 schema 补齐
+            self.assertEqual(cfg.schema, "factscribe-project/3.0")   # 缺省 schema 补齐
             self.assertEqual(cfg.name, "demo")
             self.assertEqual(cfg.root_tex, "sections/main.tex")
             self.assertEqual(cfg.level, "l1")

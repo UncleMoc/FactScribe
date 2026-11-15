@@ -371,9 +371,9 @@ def _stamp_issues(pdf: Path, report: dict, stamp_path: Path,
         return issues
 
     schema = payload.get("schema") or stamp.get("schema")
-    if str(schema or "") != "paperkit-stamp/3.0":
+    if str(schema or "") != "factscribe-stamp/3.0":
         issues.append(Issue("STAMP_REPORT_MISMATCH",
-                            "stamp schema 必须是 paperkit-stamp/3.0，实际 %r"
+                            "stamp schema 必须是 factscribe-stamp/3.0，实际 %r"
                             % schema, exit_code=5))
         return issues
 

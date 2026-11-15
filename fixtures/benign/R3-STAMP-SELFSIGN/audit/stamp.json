@@ -17,13 +17,13 @@
     },
     "input_set_sha256": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
     "nonce": "base64:AAECAwQFBgcICQoLDA0ODw==",
-    "report_sha256": "sha256:fec4ff1c062aab43dbe87f261041f4b4a7b3a44504e0aaabbe193f034fd9dcff",
+    "report_sha256": "6a187e4f217ce791d11a34a0a5fea346b5067064a8e131635665fd2091a7c940",
     "rules_sha256": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
-    "schema": "paperkit-stamp/3.0",
+    "schema": "factscribe-stamp/3.0",
     "signed_at": "2026-11-08T00:00:00Z",
     "signer_key_id": "ed25519:OWNER-FIXTURE",
     "tool_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
   },
-  "signature": "base64:OCT56cctthpGIE5B72B+n7ELB6osJsrsvOG04buLw6mBfG95VBZJDsOg0wAS+w6813ub4oxRHdCj7abTUfH5BQ==",
+  "signature": "base64:SwQwm8rVpSeDerg4FbP6bbE5p4tD/1YkWHVhuTyBDuZ36WTLu5k+IlL2krPmx2hkAEADX5/0BhBxZ3tQypeJDg==",
   "signer_key_id": "ed25519:OWNER-FIXTURE"
 }

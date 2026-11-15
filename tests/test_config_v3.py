@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""批 49：V3.0 扁平项目声明（paperkit-project/3.0）的读取测试。
+"""批 49：V3.0 扁平项目声明（factscribe-project/3.0）的读取测试。
 
 只锁「配置能读、错误信息准确、v1 行为不变」；判据（keys 在项目外、
 locale 签名、图片预算等）是 C 阶段的事，这里不测。
@@ -20,7 +20,7 @@ from factscribe.config import (ConfigError, load_config, load_facts,  # noqa: E4
 
 CLI_ROOTS = str(ROOT)
 
-V3_TOML = """schema = "paperkit-project/3.0"
+V3_TOML = """schema = "factscribe-project/3.0"
 name = "demo"
 root_tex = "main.tex"
 output = "main.pdf"
@@ -32,7 +32,7 @@ image_budget_extra = 2
 frac_allow = ["frac:A/B"]
 """
 
-V3_FACT = """schema = "paperkit-fact/3.0"
+V3_FACT = """schema = "factscribe-fact/3.0"
 id = "A1"
 claim = "rate"
 value = "10/16"
@@ -66,7 +66,7 @@ class TestV3ProjectConfig(unittest.TestCase):
             root = make_v3(Path(tmp))
             cfg = load_config(root)
             self.assertTrue(cfg.is_v3)
-            self.assertEqual(cfg.schema, "paperkit-project/3.0")
+            self.assertEqual(cfg.schema, "factscribe-project/3.0")
             self.assertEqual(cfg.name, "demo")
             self.assertEqual(cfg.title, "demo")
             self.assertEqual(cfg.root_tex, "main.tex")
@@ -98,8 +98,8 @@ class TestV3ProjectConfig(unittest.TestCase):
     def test_unknown_project_schema_rejected(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = make_v3(Path(tmp),
-                           V3_TOML.replace("paperkit-project/3.0",
-                                           "paperkit-project/9.9"))
+                           V3_TOML.replace("factscribe-project/3.0",
+                                           "factscribe-project/9.9"))
             with self.assertRaises(ConfigError) as ctx:
                 load_config(root)
             self.assertIn("schema", str(ctx.exception))
@@ -110,7 +110,7 @@ class TestV3ProjectConfig(unittest.TestCase):
             root = make_v3(Path(tmp))
             (root / "facts").mkdir()
             (root / "facts" / "A1.toml").write_text(
-                V3_FACT.replace("paperkit-fact/3.0", "paperkit-fact/1.0"),
+                V3_FACT.replace("factscribe-fact/3.0", "factscribe-fact/1.0"),
                 encoding="utf-8")
             with self.assertRaises(ConfigError) as ctx:
                 load_facts(load_config(root))
@@ -140,8 +140,8 @@ class TestV3ProjectConfig(unittest.TestCase):
     def test_unknown_schema_exits_2(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = make_v3(Path(tmp),
-                           V3_TOML.replace("paperkit-project/3.0",
-                                           "paperkit-project/4.0"))
+                           V3_TOML.replace("factscribe-project/3.0",
+                                           "factscribe-project/4.0"))
             p = subprocess.run(
                 [sys.executable, "-m", "factscribe", "check", str(root)],
                 capture_output=True, text=True, cwd=CLI_ROOTS)
@@ -153,7 +153,7 @@ class TestV1Unchanged(unittest.TestCase):
     def test_v1_project_table_still_wins(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            (root / "paperkit.toml").write_text(V1_TOML, encoding="utf-8")
+            (root / "factscribe.toml").write_text(V1_TOML, encoding="utf-8")
             cfg = load_config(root)
             self.assertFalse(cfg.is_v3)
             self.assertEqual(cfg.schema, "")
@@ -166,7 +166,7 @@ class TestV1Unchanged(unittest.TestCase):
     def test_v1_missing_project_still_errors(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            (root / "paperkit.toml").write_text('title = "x"\n', encoding="utf-8")
+            (root / "factscribe.toml").write_text('title = "x"\n', encoding="utf-8")
             with self.assertRaises(ConfigError) as ctx:
                 load_config(root)
             self.assertIn("[project]", str(ctx.exception))

@@ -54,7 +54,7 @@ def make_project(root: Path, body: str, facts: list[dict]) -> Path:
     (root / "sections" / "main.tex").write_text(MAIN % body, encoding="utf-8")
     (root / "refs.bib").write_text("", encoding="utf-8")
 
-    blocks = ['schema = "paperkit-fact/3.0"']
+    blocks = ['schema = "factscribe-fact/3.0"']
     for idx, fact in enumerate(facts, start=1):
         run_id = fact.pop("_run", "run-%02d" % idx)
         run_dir = root / "runs" / run_id
