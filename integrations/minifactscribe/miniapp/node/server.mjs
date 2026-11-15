@@ -546,6 +546,26 @@ export async function start(context) {
             sendJson(response, upstream.status, upstream.data);
             return;
           }
+          if (request.method === 'POST' && path === '/api/workbench/reports/template') {
+            // 新建报告模板：只有 Python 工作台会写盘（要 --allow-write），
+            // 上游的 400/403/409 原样带回。
+            const body = await readBody(request);
+            const upstream = await workbenchProxy(workbench.url, workbench.token,
+              '/api/reports/template', 'POST', body);
+            sendJson(response, upstream.status, upstream.data);
+            return;
+          }
+          if (request.method === 'POST' && (path === '/api/workbench/citations/add'
+            || path === '/api/workbench/citations/delete')) {
+            // 引用增删：写 bib 的活只有 Python 工作台能干（要 --allow-write），
+            // 上游的 400/403/404/409 原样带回。
+            const action = path.endsWith('/add') ? 'add' : 'delete';
+            const body = await readBody(request);
+            const upstream = await workbenchProxy(workbench.url, workbench.token,
+              '/api/citations/' + action, 'POST', body);
+            sendJson(response, upstream.status, upstream.data);
+            return;
+          }
           if (request.method === 'POST' && path === '/api/workbench/build') {
             const body = await readBody(request);
             sendJson(response, 200,

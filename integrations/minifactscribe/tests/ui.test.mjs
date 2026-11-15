@@ -228,7 +228,8 @@ test('报告动作要说人话：封存钉哈希、签收认取数位置、导�
   assert.match(HTML, /封存＝把当前文件哈希钉住/, '要说明封存是什么');
   assert.match(HTML, /签收＝你确认取数位置/, '要说明签收是什么');
   assert.match(HTML, /导入＝写进事实账/, '要说明导入是什么');
-  assert.match(JS, /没有找到实验报告/, '没有报告时要说明去哪儿找');
+  assert.match(JS, /报告由实验脚本产出/, '没有报告时要说明去哪儿找');
+  assert.match(JS, /新建报告模板/, '没有报告时要告诉人还能自己建一份');
   assert.match(JS, /启动时没加 --allow-write/, '只读时要说明为什么不能写');
 });
 
@@ -1346,4 +1347,97 @@ test('太大的文件关闭高亮并说清楚为什么', () => {
   assert.match(JS, /HIGHLIGHT_MAX_CHARS = 200 \* 1024/, '超过 200 KB 就关掉高亮');
   assert.match(HTML, /id="wb-highlight-note"/, '提示元素要在页面里');
   assert.match(JS, /wb-highlight-note/, '要有一行提示');
+});
+
+// ------------------------------------------------- 15. 三个页面的顶部操作
+//
+// 事实账、实验报告、引用这三页各自缺一个「从这里开始」的动作：
+//   - 事实账：追加事实的表单藏在页面下方，右上角没有入口；
+//   - 实验报告：下拉一直是空的，用户不知道报告从哪来；
+//   - 引用：只能看不能改。
+// 这一组钉住三个右上角按钮与它们各自的接口。
+
+test('事实账右上角有「追加事实」：点了展开表单并把焦点放到 ID 栏', () => {
+  const head = HTML.slice(HTML.indexOf('id="panel-facts"'),
+    HTML.indexOf('id="panel-reports"'));
+  assert.match(head, /class="panel-head"/, '事实页要有页头');
+  assert.match(head, /id="btn-wb-fact-add"/, '页头右侧要有追加按钮');
+  assert.match(JS, /function openFactForm/, '要有展开表单的函数');
+  const block = JS.slice(JS.indexOf('function openFactForm'),
+    JS.indexOf('async function addWorkbenchFact'));
+  assert.ok(block.length > 0, '应有 openFactForm');
+  assert.match(block, /wb-fact-card/, '要展开 #wb-fact-card');
+  assert.match(block, /\.open = true/, 'details 要真的打开');
+  assert.match(block, /scrollIntoView/, '要滚到可见');
+  assert.match(block, /wb-fact-id/, '焦点要放到 ID 栏');
+  assert.match(JS, /#btn-wb-fact-add'\)\.addEventListener\('click', openFactForm\)/,
+    '按钮要接上展开动作');
+});
+
+test('报告页右上角能新建报告模板：问 id、POST 模板接口、刷完选中新报告', () => {
+  const head = HTML.slice(HTML.indexOf('id="panel-reports"'),
+    HTML.indexOf('id="panel-citations"'));
+  assert.match(head, /id="btn-report-new"/, '报告页头要有新建按钮');
+  assert.match(JS, /wb\('\/reports\/template'\)/, '要走工作台模板接口');
+  assert.match(JS, /method:\s*'POST'[\s\S]{0,200}reports\/template|reports\/template[\s\S]{0,200}method:\s*'POST'/,
+    '建模板是 POST');
+  const block = JS.slice(JS.indexOf('async function newReportTemplate'),
+    JS.indexOf('function citeStatusChip'));
+  assert.ok(block.length > 0, '应有 newReportTemplate');
+  assert.match(block, /prompt\(/, '要用 prompt 问报告 id');
+  assert.match(block, /report-/, '默认 id 是 report-YYYYMMDD');
+  assert.match(block, /loadWorkbenchReports\(\)/, '建完要刷新报告列表');
+  assert.match(block, /select\.value = data\.path/, '要选中新报告');
+  assert.match(block, /report\.templateCreated/, '状态行要提示下一步');
+  assert.match(JS, /'report\.templateCreated':\s*'模板已建，填好 metrics 后检查\/封存\/签收'/,
+    '提示语要写清下一步做什么');
+});
+
+test('报告空状态说人话：报告从哪来 + 还能自己建一份', () => {
+  assert.match(JS, /还没有报告。报告由实验脚本产出/, '空状态要说清报告从哪来');
+  assert.match(JS, /experiments\/<实验>\/reports\/\*\.report\.toml/, '要给出报告文件的位置');
+  assert.match(JS, /新建报告模板/, '要告诉人还能自己建一份');
+});
+
+test('引用页右上角能添加引用：内联表单六个字段 + 提交走工作台接口', () => {
+  const panel = HTML.slice(HTML.indexOf('id="panel-citations"'),
+    HTML.indexOf('id="panel-project"'));
+  assert.match(panel, /id="btn-cite-add"/, '引用页头要有添加按钮');
+  assert.match(panel, /id="cite-form"/, '要有内联表单');
+  for (const id of ['cite-key', 'cite-title', 'cite-author', 'cite-year',
+    'cite-doi', 'cite-arxiv']) {
+    assert.match(panel, new RegExp('id="' + id + '"'), '表单里要有 ' + id);
+  }
+  assert.match(JS, /wb\('\/citations\/add'\)/, '要走工作台添加接口');
+  assert.match(JS, /wb\('\/citations\/delete'\)/, '要走工作台删除接口');
+  assert.match(JS, /method:\s*'POST'[\s\S]{0,240}citations\/add|citations\/add[\s\S]{0,240}method:\s*'POST'/,
+    '加引用是 POST');
+});
+
+test('每条引用都有删除按钮：先确认再删，删完刷新列表', () => {
+  assert.match(JS, /data-cite-delete=/, '每行都要有删除按钮');
+  const block = JS.slice(JS.indexOf('async function deleteCitation'),
+    JS.indexOf('const REPORT_ACTION_LABEL'));
+  assert.ok(block.length > 0, '应有 deleteCitation');
+  assert.match(block, /confirm\(/, '删之前要先问人');
+  assert.match(block, /loadCitations\(\)/, '删完要刷新列表');
+  assert.match(JS, /data-cite-delete/, '按钮要带 data-cite-delete');
+});
+
+test('只读工作台：新建模板、加引用、删引用都灰掉', () => {
+  const reports = JS.slice(JS.indexOf('function renderWorkbenchReports'),
+    JS.indexOf('function renderReportState'));
+  assert.match(reports, /btn-report-new/, '报告页要管新建按钮');
+  assert.match(reports, /disabled/, '只读时要禁用按钮');
+  const cites = JS.slice(JS.indexOf('function renderCitations'),
+    JS.indexOf('async function loadCitations'));
+  assert.match(cites, /btn-cite-add/, '引用页要管添加按钮');
+  assert.match(cites, /read_only/, '只读来自服务端的 read_only');
+  assert.match(cites, /disabled/, '只读时要禁用按钮');
+});
+
+test('MiniApp 走 Node 代理：三条新接口都要有对应的代理路由', () => {
+  assert.match(SERVER, /'\/api\/workbench\/reports\/template'/, 'Node 侧要有建模板代理');
+  assert.match(SERVER, /'\/api\/workbench\/citations\/add'/, 'Node 侧要有加引用代理');
+  assert.match(SERVER, /'\/api\/workbench\/citations\/delete'/, 'Node 侧要有删引用代理');
 });

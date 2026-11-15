@@ -759,6 +759,18 @@ math { font-size: 1.02em; }
   background: var(--mcode-danger-soft); color: var(--mcode-danger);
 }
 .cite-row-files { font-size: 11px; color: var(--mcode-text-subtle); word-break: break-all; }
+/* 添加引用：右上角按钮展开的内联表单（key/标题/作者/年份/DOI/arXiv）。 */
+.cite-form {
+  display: grid; gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  padding: 14px; margin: 0 0 12px;
+  border: 1px solid var(--mcode-border); border-radius: 12px; background: var(--mcode-surface);
+}
+.cite-form .field { margin: 0; }
+.cite-form .panel-actions, .cite-form .muted-note { grid-column: 1 / -1; }
+/* 每行的删除按钮：整格可见，不被横向滚动条推到看不见的地方。 */
+.cite-act { white-space: nowrap; }
+.cite-del { height: 26px; padding: 0 10px; font-size: 12px; }
 
 /* ---------- 工作台两栏：源码+预览 / 问题+AI ---------- */
 /* 章节目录搬到左侧栏了；这里只剩两栏，窄于 1100px 就叠成一列。 */

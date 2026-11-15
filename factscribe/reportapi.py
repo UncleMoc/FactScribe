@@ -18,8 +18,11 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import datetime
 import io
 import json
+import os
+import re
 from pathlib import Path
 
 from .config import ConfigError, load_config
@@ -35,6 +38,10 @@ ACTIONS = ("check", "lock", "sign", "import")
 WRITE_ACTIONS = ("lock", "sign", "import")
 
 _REPORT_SUFFIX = ".report.toml"
+
+# 报告 id 的白名单：字母数字与 . _ -（与 report._ID_RE 一致，但更严：
+# 连 ".." 也不许，免得拼出目录外的东西）。
+_REPORT_ID_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 
 
 def workspace_of(cfg) -> Path:
@@ -131,7 +138,7 @@ def reports_data(project: Path | str) -> dict:
 def _require_write(allow_write: bool) -> None:
     if not allow_write:
         raise ConfigError(
-            "serve 当前是只读模式；封存/签收/导入需要启动时加 --allow-write",
+            "serve 当前是只读模式；新建模板/封存/签收/导入需要启动时加 --allow-write",
             code="READ_ONLY")
 
 
@@ -245,3 +252,94 @@ def report_action_data(project: Path | str, body: dict,
     # import：入账走既有三道门，写进论文项目的事实账。
     result = _fact_import(cfg.root, ws, rel, bool(body.get("dry_run")))
     return {"action": action, "result": result}
+
+
+# ============================================================ 新建报告模板
+#
+# 报告页的下拉一直是空的，是因为报告由实验脚本产出；没跑实验就一份都没有。
+# 这个动作给一个起点：在工作区的 reports/ 下写一份**带注释的模板**，
+# 人填完 metrics 就能走「检查 → 封存 → 签收 → 导入」。
+#
+# 三条硬规矩：
+#   1. id 白名单 `[A-Za-z0-9._-]`，且不许 ".."（否则拼出目录外的东西）；
+#   2. 目标已存在 → REPORT_EXISTS（409），不覆盖人的报告；
+#   3. 要写盘，所以只读工作台一律拒（READ_ONLY）。
+
+_REPORT_TEMPLATE = """\
+# 实验报告模板（schema = factscribe/report@1）
+#
+# 这是一份起点，不是成品。按顺序填：
+#   1. 把 experiment 改成你的实验名（实验目录 experiments/<实验>/reports/ 就按它分）；
+#   2. 取消下面 metric 的注释，改成你自己的指标；
+#   3. sources 里的 path 指向工作区里的原始产物（相对路径）；
+#   4. 填好之后回工作台：检查 → 封存 → 签收 → 导入事实账。
+schema = "factscribe/report@1"
+id = "%(id)s"
+experiment = "%(experiment)s"
+status = "partial"
+generated_at = "%(generated_at)s"
+population = { id = "%(experiment)s" }
+
+# 示例 metric：取消注释并改成你自己的（一个 metric 至少要一个 role=value 的来源）。
+# [[metric]]
+# id = "p95"
+# claim = "端到端时延 p95（毫秒）"
+# value = "12.5"
+# value_type = "float"
+# precision = 1
+# display = "12.5"
+# sources = [
+#   { role = "value", path = "results/summary.json", probe = "json.pointer", pointer = "/p95_ms" },
+# ]
+"""
+
+
+def _report_id(raw: str) -> str:
+    """报告 id：白名单 + 不许 ".."（400）。"""
+    rid = str(raw or "").strip()
+    if not rid:
+        raise ConfigError("报告 id 必填：要建哪一份", code="REPORT_ID_INVALID")
+    if not _REPORT_ID_RE.match(rid) or ".." in rid or rid in (".", ".."):
+        raise ConfigError(
+            "报告 id %r 不合法：只许字母数字与 . _ -" % rid,
+            code="REPORT_ID_INVALID")
+    return rid
+
+
+def _write_atomic(path: Path, text: str) -> None:
+    """原子写：同目录临时文件 + rename。"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name("%s.tmp-%d" % (path.name, os.getpid()))
+    try:
+        with open(tmp, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        os.replace(str(tmp), str(path))
+    finally:
+        if tmp.exists():
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
+
+
+def report_template_data(project: Path | str, body: dict,
+                          allow_write: bool = False) -> dict:
+    """POST /api/reports/template 的数据面：写一份带注释的报告模板。"""
+    _require_write(allow_write)
+    if not isinstance(body, dict):
+        raise ConfigError("请求体必须是 JSON 对象", code="REPORT_ID_INVALID")
+    rid = _report_id(body.get("id"))
+    cfg = load_config(Path(project))
+    ws = _ws_root(workspace_of(cfg))
+    target = ws / "reports" / (rid + _REPORT_SUFFIX)
+    if target.exists() or target.is_symlink():
+        raise ConfigError("已经有这份报告了：%s" % rid, code="REPORT_EXISTS")
+    # 实验名：默认从 id 推（report-20261115 → 20261115），人自己改。
+    experiment = rid[len("report-"):] if rid.startswith("report-") else rid
+    generated_at = datetime.datetime.now(datetime.timezone.utc).replace(
+        microsecond=0).isoformat().replace("+00:00", "Z")
+    text = _REPORT_TEMPLATE % {"id": rid, "experiment": experiment,
+                               "generated_at": generated_at}
+    _write_atomic(target, text)
+    return {"id": rid, "path": _rel_posix(ws, target),
+            "experiment": experiment}

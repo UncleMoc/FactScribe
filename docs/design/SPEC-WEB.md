@@ -127,10 +127,12 @@ URL：http://127.0.0.1:<port>
 | 项目 | MiniApp 模式显示最近项目、一键启动与权限开关；网页模式显示「本机服务」 |
 | 章节 | 下拉选节 + 编辑器 + 保存（只读时禁用） |
 | 审计 | 结论、红黄 findings、退出码 |
-| 事实账 | 表格 + 追加事实表单（ID/主张/值/来源必填） |
+| 事实账 | 表格 + 追加事实表单（ID/主张/值/来源必填）；页头右侧有「追加事实」按钮，点了展开表单并把焦点放到 ID 栏 |
 | 证据 | 冻结状态、lock 哈希、mismatch/unfrozen，冻结/解冻按钮 |
 | 编译 | 编译 PDF、打开 PDF；需 `--allow-build` |
-| 实验报告 | 列出 `experiments/*/reports/*.report.toml` 与 `reports/*.report.toml`；显示状态（final / 已封存 / 已签收）；检查、封存、签收、导入四个动作；审阅卡逐行不截断 |
+| 实验报告 | 列出 `experiments/*/reports/*.report.toml` 与 `reports/*.report.toml`；显示状态（final / 已封存 / 已签收）；检查、封存、签收、导入四个动作；审阅卡逐行不截断；页头右侧有「新建报告模板」 |
+| 引用 | 多 bib 汇总；右上角「添加引用」追加到 `cfg.bib`（`POST /api/citations/add`），每行可「删除」（`POST /api/citations/delete`，按 key 删条目） |
+| 引用 | 多 bib 汇总与状态表；页头右侧有「添加引用」，每行有「删除」 |
 
 - 启动后自动载入工作台项目并跑一次审计；
 - 保存走 `PUT /api/sections`，保存后不自动重审，由「运行审计」按钮触发；
@@ -146,17 +148,35 @@ URL：http://127.0.0.1:<port>
 - 网页模式下宿主专属区（草稿、AI、一键启动）隐藏；`?dev=1` 才显示，且只做界面预览；
 - 项目管理（最近项目、加入/移除文件夹）两种模式都有；网页里选中即让服务切到该文件夹。
 
+### 2.1 三个页面的顶部动作
+
+| 动作 | 接口 | 规则 |
+|---|---|---|
+| 事实账「追加事实」 | 复用 `POST /api/facts` | 只展开已有的 `#wb-fact-card`（不重复实现表单），滚到可见，焦点落到 `#wb-fact-id` |
+| 报告「新建报告模板」 | `POST /api/reports/template` | 入参 `{"id": "..."}`；在 `<工作区>/reports/<id>.report.toml` 写一份**带注释**的 `factscribe/report@1` 模板（`schema`/`id`/`experiment`/`status = "partial"`/`generated_at`/`population = { id = … }` + 一段注释掉的示例 metric）；id 白名单 `[A-Za-z0-9._-]`，否则 400 `REPORT_ID_INVALID`；目标已存在 409 `REPORT_EXISTS`；只读 403 `READ_ONLY`；返回 `{ok, path}` |
+| 引用「添加引用」 | `POST /api/citations/add` | 入参 `{key, title, author, year, doi, arxiv}`；在项目的 `cfg.bib` 末尾追加一条 `@article{…}`（原子写：先读原文再写临时文件 + rename）；key 白名单 `[A-Za-z0-9:._-]+`，否则 400 `CITATION_INVALID`；key 已存在 409 `CITATION_EXISTS`；只读 403 `READ_ONLY` |
+| 引用「删除」 | `POST /api/citations/delete` | 入参 `{"key": "..."}`；用 `citations.parse_bib` 定位该 key 的条目行范围，从文件里删掉这一段后原子写回（其它条目一字不动）；找不到 404 `CITATION_MISSING` |
+
+- 建完模板要刷新报告列表、选中新报告，状态行提示「模板已建，填好 metrics 后检查/封存/签收」；
+- 报告为空时的文案要说清报告从哪来（实验脚本产出的
+  `experiments/<实验>/reports/*.report.toml`），并指路右上角「新建报告模板」；
+- 引用增删都要先问人（删之前 `confirm`）；增删完刷新引用列表；
+- 只读工作台把「新建报告模板」「添加引用」与每行的「删除」都灰掉，并说清原因；
+- MiniApp 走 Node 代理：`/api/workbench/reports/template`、`/api/workbench/citations/add`、
+  `/api/workbench/citations/delete`。
+
 ## 3. 安全
 
 - 页面与 API 同源，只绑回环；
 - 静态文件只允许 `index.html` / `app.js` / `app.css` 三个固定名字；
 - `serve_ui=False` 时 `GET /` 不提供页面；
-- 默认只读；`--allow-write` 才启用保存、冻结/解冻；`--allow-build` 才启用编译。
+- 默认只读；`--allow-write` 才启用保存、冻结/解冻、新建报告模板、引用增删；
+  `--allow-build` 才启用编译。
 
 ## 4. 非目标
 
 - 不做富文本/Markdown 预览；正文就是 LaTeX 源码；
-- 不做 bib 编辑；PDF 编译只在 `--allow-build` 下开放；
+- 引用页只增删条目，不改正文里的 `\cite`；PDF 编译只在 `--allow-build` 下开放；
 - 事实表单只追加，不编辑/删除已有事实；
 - 不引入前端构建链或第三方依赖。
 
@@ -164,6 +184,9 @@ URL：http://127.0.0.1:<port>
 
 `tests/test_web.py`（7 例）：首页免 token、静态资源、事实表单、编译默认拒绝、
 API 仍要 token、带 token 读项目、`--allow-build` 下编译并下载 PDF；
+`tests/test_top_actions.py`（16 例）：新建报告模板（文件生成 / 重复 409 / 非法 id 400 /
+只读 403）、引用添加（进 bib / 重复 409 / 非法 key 400）、引用删除（条目消失 / 别的条目
+还在 / 找不到 404 / 只读 403）；
 `integrations/minifactscribe/tests/sync.test.mjs`（4 例）钉住两边界面逐字节一致；
 `integrations/minifactscribe/tests/ui.test.mjs` 覆盖模式判定、网页 token、
-`--dev` 提示、编译/事实/证据入口。
+`--dev` 提示、编译/事实/证据入口，以及三个顶部动作的按钮、接口与只读禁用。
