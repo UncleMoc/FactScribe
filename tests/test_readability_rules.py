@@ -46,7 +46,7 @@ def make_project(tmp, files: dict, rules: str | None = None) -> Path:
     root = Path(tmp)
     (root / "sections").mkdir(parents=True, exist_ok=True)
     (root / "facts").mkdir(parents=True, exist_ok=True)
-    (root / "paperkit.toml").write_text(PROJECT_TOML, encoding="utf-8")
+    (root / "factscribe.toml").write_text(PROJECT_TOML, encoding="utf-8")
     for name, body in files.items():
         path = root / "sections" / name
         path.parent.mkdir(parents=True, exist_ok=True)

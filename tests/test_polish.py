@@ -86,7 +86,7 @@ def make_project(base: Path, body: str = STYLE_BODY,
     root = Path(base)
     (root / "sections").mkdir(parents=True, exist_ok=True)
     (root / "facts").mkdir(parents=True, exist_ok=True)
-    (root / "paperkit.toml").write_text(PROJECT_TOML + extra_toml,
+    (root / "factscribe.toml").write_text(PROJECT_TOML + extra_toml,
                                         encoding="utf-8")
     (root / "sections" / "01_main.tex").write_text(body, encoding="utf-8")
     return root

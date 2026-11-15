@@ -79,7 +79,7 @@ sources = [
 ]
 """
 
-PAPERKIT_TOML = """\
+FACTSCRIBE_TOML = """\
 [project]
 title = "报告接口测试"
 sections = "sections/*.tex"
@@ -121,7 +121,7 @@ class Workspace:
 
     def write_paper(self):
         paper = self.root / "paper"
-        (paper / "paperkit.toml").write_text(PAPERKIT_TOML, encoding="utf-8")
+        (paper / "factscribe.toml").write_text(FACTSCRIBE_TOML, encoding="utf-8")
         (paper / "refs.bib").write_text("", encoding="utf-8")
         (paper / "sections" / "01-intro.tex").write_text(
             "本节没有数字，只有一句话。\n", encoding="utf-8")

@@ -101,7 +101,7 @@ class SampleGuideTest(unittest.TestCase):
         self.assertTrue(data["created"])
         self.assertFalse(data["reset"])
         self.assertEqual(data["path"], str(self.target))
-        self.assertTrue((self.target / "paperkit.toml").is_file())
+        self.assertTrue((self.target / "factscribe.toml").is_file())
         self.assertTrue((self.target / "sections").is_dir())
         self.assertTrue((self.target / "sections" / "01-intro.tex").is_file())
         self.assertTrue((self.target / "sections" / "02-results.tex").is_file())

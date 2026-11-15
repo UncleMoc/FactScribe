@@ -9,7 +9,7 @@
 * 链接目标、表格行、front matter 不参与句级规则；
 * 围栏未闭合不崩，按到文末处理；
 * 段落不跨围栏；
-* 无 ``paperkit.toml`` 也能跑；
+* 无 ``factscribe.toml`` 也能跑；
 * ``.tex`` 仍走旧路径（examples/minimal 逐项回归锁）；
 * ``--doc`` 与项目目录同时给出 = 用法错（exit 2）。
 
@@ -255,9 +255,9 @@ class MarkdownStyleCliTest(unittest.TestCase):
             self.assertIn(proc.returncode, (0, 3), proc.stderr)
             self.assertNotIn("DASH_PARENTHETICAL", codes(payload))
 
-    def test_runs_without_paperkit_toml(self):
+    def test_runs_without_factscribe_toml(self):
         with tempfile.TemporaryDirectory() as tmp:
-            self.assertFalse((Path(tmp) / "paperkit.toml").exists())
+            self.assertFalse((Path(tmp) / "factscribe.toml").exists())
             proc, payload = style_doc(Path(tmp), SAMPLE)
             self.assertNotEqual(proc.returncode, 2, proc.stderr)
             self.assertEqual(payload["summary"]["files"], 1)

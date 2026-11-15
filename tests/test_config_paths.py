@@ -33,7 +33,7 @@ def new_project(tmp: Path) -> Path:
 
 
 def set_key(project: Path, key: str, value: str) -> None:
-    path = project / "paperkit.toml"
+    path = project / "factscribe.toml"
     lines = []
     for line in path.read_text(encoding="utf-8").splitlines():
         if line.startswith("%s =" % key):
@@ -78,6 +78,16 @@ class ConfigPathTest(unittest.TestCase):
             self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
             self.assertIn("sections", proc.stderr)
             self.assertIn("项目内相对路径", proc.stderr)
+
+    def test_legacy_config_name_is_no_longer_read(self):
+        """旧配置名（拆名前的旧字面量，按拼接构造）已拆除回退：只留旧名＝找不到项目声明（exit 2）。"""
+        legacy = "paper" + "kit.toml"  # 旧名字面量不落盘，硬切后旧名不再被读
+        with tempfile.TemporaryDirectory() as tmp:
+            project = new_project(Path(tmp))
+            (project / "factscribe.toml").rename(project / legacy)
+            proc = run("audit", str(project))
+            self.assertEqual(proc.returncode, 2, proc.stdout + proc.stderr)
+            self.assertIn("找不到项目声明", proc.stderr)
 
 
 if __name__ == "__main__":

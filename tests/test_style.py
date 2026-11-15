@@ -37,7 +37,7 @@ def make_project(tmp, body: str, rules: str | None = None) -> Path:
     (root / "sections").mkdir(parents=True, exist_ok=True)
     (root / "facts").mkdir(parents=True, exist_ok=True)
     (root / "sections" / "01_main.tex").write_text(body, encoding="utf-8")
-    (root / "paperkit.toml").write_text(PROJECT_TOML, encoding="utf-8")
+    (root / "factscribe.toml").write_text(PROJECT_TOML, encoding="utf-8")
     if rules is not None:
         (root / "style-rules.toml").write_text(rules, encoding="utf-8")
     return root

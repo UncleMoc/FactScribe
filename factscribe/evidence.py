@@ -201,7 +201,7 @@ def suggest_evidence(sections: list[tuple[str, str]]) -> dict[str, list[str]]:
 
 
 def render_toml(evidence: dict[str, list[str]]) -> str:
-    """可直接粘进 ``paperkit.toml`` 的 ``[evidence]`` 块（确定性）。"""
+    """可直接粘进 ``factscribe.toml`` 的 ``[evidence]`` 块（确定性）。"""
     lines = ["[evidence]"]
     for key in sorted(evidence, key=lambda k: (k.casefold(), k)):
         ids = ", ".join(json.dumps(str(i), ensure_ascii=False)

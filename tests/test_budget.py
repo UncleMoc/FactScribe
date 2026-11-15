@@ -78,7 +78,7 @@ def make_project(base: Path, sections: dict, budget: str | None = None) -> Path:
     text = PROJECT_TOML
     if budget is not None:
         text += "\n" + budget.strip() + "\n"
-    (root / "paperkit.toml").write_text(text, encoding="utf-8")
+    (root / "factscribe.toml").write_text(text, encoding="utf-8")
     (root / "facts" / "one.toml").write_text(
         '[[fact]]\nid = "B1"\nclaim = "一条主张"\nvalue = "53"\n',
         encoding="utf-8")

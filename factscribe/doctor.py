@@ -22,8 +22,8 @@ import unicodedata
 from pathlib import Path
 
 from .buildpdf import find_cjk_font, find_fandol_fonts
-from .config import (Config, ConfigError, load_config, load_facts,
-                     load_sections, load_toml)
+from .config import (Config, ConfigError, find_config_file, load_config,
+                     load_facts, load_sections, load_toml)
 from .evidence import LOCK_REL, read_lock, unfrozen_info
 from .scaffold import INIT_FILES
 
@@ -173,7 +173,7 @@ def _project_check(root: Path) -> tuple[dict, Config | None]:
     try:
         cfg = load_config(root)
     except ConfigError as exc:
-        if any((root / name).is_file() for name in ("factscribe.toml", "paperkit.toml")):
+        if (root / "factscribe.toml").is_file():
             return (_check("project", "项目声明", LEVEL_FAIL, str(exc),
                            fix="按报错修项目声明"), None)
         if _looks_like_paper(root):
@@ -203,7 +203,8 @@ def _project_check(root: Path) -> tuple[dict, Config | None]:
             "（根级 .tex 含 \\documentclass）" % exc,
             fix="换一个空目录建项目：python3 -m factscribe init <新目录>"), None)
     shape = getattr(cfg, "config_shape", "") or ("v3" if cfg.is_v3 else "v1")
-    detail = "%s（形态 %s" % (cfg.root / "paperkit.toml", shape)
+    config_shown = find_config_file(cfg.root) or (cfg.root / "factscribe.toml")
+    detail = "%s（形态 %s" % (config_shown, shape)
     if cfg.title:
         detail += "，标题「%s」" % cfg.title
     detail += "）"
@@ -212,7 +213,7 @@ def _project_check(root: Path) -> tuple[dict, Config | None]:
         return (_check("project", "项目声明", LEVEL_WARN,
                        "%s；另有 %d 条配置告警：%s"
                        % (detail, len(warnings), "；".join(warnings[:2])),
-                       fix="按告警改 paperkit.toml"), cfg)
+                       fix="按告警改 factscribe.toml"), cfg)
     return _check("project", "项目声明", LEVEL_OK, detail), cfg
 
 
@@ -221,7 +222,7 @@ def _sections_check(cfg: Config) -> dict:
         sections = load_sections(cfg)
     except ConfigError as exc:
         return _check("sections", "章节", LEVEL_FAIL, str(exc),
-                      fix="检查 paperkit.toml 的 sections / root_tex")
+                      fix="检查 factscribe.toml 的 sections / root_tex")
     if not sections:
         return _check("sections", "章节", LEVEL_WARN,
                       "没有匹配到任何 .tex 章节，audit 会对着空正文跑",

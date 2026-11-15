@@ -85,14 +85,14 @@ def render_matrix(cfg: Config, facts: list[Fact], sections: list[tuple[str, str]
 
 
 # --------------------------------------------------------------------------
-# preamble：给正文里的 \fact / \pkignore 一个真宏（红队 C10）
+# preamble：给正文里的 \fact / \fsignore 一个真宏（红队 C10）
 # --------------------------------------------------------------------------
 
-PREAMBLE_TEXT = """% 由 paperkit 生成：把本文件 \\input 到导言区（main.tex 的 \\begin{document} 之前）。
+PREAMBLE_TEXT = """% 由 factscribe 生成：把本文件 \\input 到导言区（main.tex 的 \\begin{document} 之前）。
 % \\fact{ID} 只做审计绑定，排版上不产生可见字符，避免 PDF 里出现字面量。
 \\providecommand{\\fact}[1]{}
-% \\pkignore{...} 是显式的数字豁免区：内容照排，但不进数字审计。
-\\providecommand{\\pkignore}[1]{#1}
+% \\fsignore{...} 是显式的数字豁免区：内容照排，但不进数字审计。
+\\providecommand{\\fsignore}[1]{#1}
 """
 
 # --------------------------------------------------------------------------
@@ -116,7 +116,7 @@ def _status_word(code: int) -> str:
 
 
 def _human_check(cfg, facts, issues, warnings, conflicts, summary, code) -> str:
-    lines = ["== paperkit check ==", "project : %s" % cfg.root,
+    lines = ["== factscribe check ==", "project : %s" % cfg.root,
              "facts   : %d 条（id %d 个，source 均在位 %d 条，sha 钉住 %d 条）"
              % (summary["facts"], summary["ids"], summary["sources_ok"],
                 summary["sha_pinned"]), ""]
@@ -140,14 +140,14 @@ def _human_check(cfg, facts, issues, warnings, conflicts, summary, code) -> str:
 def _human_audit(cfg, red, yellow, hints, summary, unresolved, code) -> str:
     cov = summary.get("coverage", {})
     lines = [
-        "== paperkit audit ==",
+        "== factscribe audit ==",
         "project : %s" % cfg.root,
         "facts   : %d 条      sections: %d 个（扫描 %d 个 .tex）" % (
             summary["facts"], summary["sections"], cov.get("files_scanned_count", 0)),
         "numbers : %d 个（bound %d / unbound %d / unmatched %d）" % (
             summary["numbers_total"], summary["numbers_bound"],
             summary.get("numbers_unbound", 0), summary["numbers_unmatched"]),
-        "notes   : 已跳过 %d 处批注（\\todoq/\\todo/\\pkignore 等，内容不参与审计）"
+        "notes   : 已跳过 %d 处批注（\\todoq/\\todo/\\fsignore 等，内容不参与审计）"
         % summary.get("annotations_skipped", 0),
         "cites   : %d 次调用、%d 个 key；bib %d 条（命中 %d）" % (
             summary["cites_total"], summary["cites_unique"],
@@ -204,9 +204,6 @@ def _config_block(cfg: Config) -> dict:
              "schema": cfg.schema,
              "file": "factscribe.toml",
              "warnings": list(cfg.warnings)}
-    cfg_path = cfg.root / "paperkit.toml"
-    if cfg_path.is_file() and not (cfg.root / "factscribe.toml").is_file():
-        block["file"] = "paperkit.toml"
     return block
 
 

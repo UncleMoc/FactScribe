@@ -2,9 +2,9 @@
 """改项目名与简介：`POST /api/projects/update`。
 
 要点：
-  * 要 token，也要 `--allow-write`（它写盘：登记册 + `paperkit.toml`）；
+  * 要 token，也要 `--allow-write`（它写盘：登记册 + `factscribe.toml`）；
   * 路径不在登记册里 → 400（不凭空造项目）；
-  * 登记册的 `name`/`description` 与 `paperkit.toml` 的 `title`/`description`
+  * 登记册的 `name`/`description` 与 `factscribe.toml` 的 `title`/`description`
     一起改，其它键（sections/facts/bib…）一个字都不动；
   * 只读服务一律 403。
 
@@ -110,8 +110,8 @@ class ProjectsUpdateTest(unittest.TestCase):
         row = self._registry()["projects"][0]
         self.assertEqual(row["name"], "新名字")
         self.assertEqual(row["description"], "新简介")
-        # paperkit.toml 也改了
-        text = (self.root / "paperkit.toml").read_text(encoding="utf-8")
+        # factscribe.toml 也改了
+        text = (self.root / "factscribe.toml").read_text(encoding="utf-8")
         self.assertIn('title = "新名字"', text)
         self.assertIn('description = "新简介"', text)
         # 其它键原样保留
@@ -120,12 +120,12 @@ class ProjectsUpdateTest(unittest.TestCase):
 
     def test_update_keeps_other_toml_keys(self):
         target = self._register(self.root)
-        before = (self.root / "paperkit.toml").read_text(encoding="utf-8")
+        before = (self.root / "factscribe.toml").read_text(encoding="utf-8")
         status, data = self._request(
             "/api/projects/update", method="POST", token=self.token,
             body={"path": target, "name": "改名了", "description": "换了简介"})
         self.assertEqual(status, 200, data)
-        after = (self.root / "paperkit.toml").read_text(encoding="utf-8")
+        after = (self.root / "factscribe.toml").read_text(encoding="utf-8")
         for key in ("sections", "facts", "bib", "build", "authors"):
             self.assertIn(key, after, key + " 不该被改掉")
         self.assertNotEqual(before, after)

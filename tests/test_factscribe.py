@@ -16,7 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import factscribe as paperkit  # noqa: E402
+import factscribe  # noqa: E402
 
 CLI_ROOTS = str(ROOT)
 
@@ -110,7 +110,7 @@ def make_project(tmp, facts=FACTS, sections=None, bib="", build="",
             dest.write_text(text, encoding="utf-8")
     if bib is not None:
         (root / "refs.bib").write_text(bib, encoding="utf-8")
-    (root / "paperkit.toml").write_text(
+    (root / "factscribe.toml").write_text(
         '[project]\ntitle = "t"\nauthors = ["a"]\n'
         'sections = "sections/*.tex"\nfacts = "facts/*.toml"\n'
         'bib = "refs.bib"\nbuild = "%s"\n' % build,
@@ -133,52 +133,52 @@ def run_json(args):
 
 class TestNumberNormalization(unittest.TestCase):
     def test_thousands_separator(self):
-        self.assertEqual(paperkit.number_key("1,234"), "1234")
+        self.assertEqual(factscribe.number_key("1,234"), "1234")
 
     def test_trailing_zero(self):
-        self.assertEqual(paperkit.number_key("0.90"), paperkit.number_key("0.9"))
+        self.assertEqual(factscribe.number_key("0.90"), factscribe.number_key("0.9"))
 
     def test_percent(self):
-        self.assertEqual(paperkit.number_key("10", None, True), "0.1")
+        self.assertEqual(factscribe.number_key("10", None, True), "0.1")
 
     def test_percent_equivalent_forms(self):
         # 数字层：10% 与 10\% 都归一成 0.1
-        self.assertEqual(paperkit.number_key("10", None, True), "0.1")
-        a = paperkit.scan_tex(r"准确率 10\% 而已")
-        na = [n["key"] for n in paperkit._extract_numbers(a.masked, "x")]
+        self.assertEqual(factscribe.number_key("10", None, True), "0.1")
+        a = factscribe.scan_tex(r"准确率 10\% 而已")
+        na = [n["key"] for n in factscribe._extract_numbers(a.masked, "x")]
         self.assertEqual(na, ["0.1"])
         # 账目层：value="10%" 同时接受 0.1 与裸 10
-        keys = paperkit.fact_value_keys("10%")
+        keys = factscribe.fact_value_keys("10%")
         self.assertIn("0.1", keys)
         self.assertIn("10", keys)
 
     def test_bare_percent_starts_comment_like_tex(self):
         # 裸 % 在 TeX 里就是注释起点：后面的数字不该进审计
-        s = paperkit.scan_tex("达到 10% 但后面 99 是注释")
-        self.assertEqual([n["token"] for n in paperkit._extract_numbers(s.masked, "x")], ["10"])
+        s = factscribe.scan_tex("达到 10% 但后面 99 是注释")
+        self.assertEqual([n["token"] for n in factscribe._extract_numbers(s.masked, "x")], ["10"])
 
     def test_kilo(self):
-        self.assertEqual(paperkit.number_key("53", "k"), "53000")
+        self.assertEqual(factscribe.number_key("53", "k"), "53000")
 
     def test_mega(self):
-        self.assertEqual(paperkit.number_key("3.5", "M"), "3500000")
+        self.assertEqual(factscribe.number_key("3.5", "M"), "3500000")
 
     def test_fraction_value_accepts_parts_and_quotient(self):
-        keys = paperkit.fact_value_keys("10/16")
+        keys = factscribe.fact_value_keys("10/16")
         self.assertIn("10", keys)
         self.assertIn("16", keys)
         self.assertIn("0.625", keys)
 
     def test_range_value_accepts_both_ends(self):
-        keys = paperkit.fact_value_keys("10--16")
+        keys = factscribe.fact_value_keys("10--16")
         self.assertIn("10", keys)
         self.assertIn("16", keys)
 
 
 class TestTexMasking(unittest.TestCase):
     def nums(self, tex):
-        s = paperkit.scan_tex(tex)
-        return [n["token"] for n in paperkit._extract_numbers(s.masked, tex)]
+        s = factscribe.scan_tex(tex)
+        return [n["token"] for n in factscribe._extract_numbers(s.masked, tex)]
 
     def test_comment_ignored(self):
         self.assertEqual(self.nums("% 早期版本 99.9\\% 是错的\n正文 3 个"), ["3"])
@@ -198,13 +198,13 @@ class TestTexMasking(unittest.TestCase):
         self.assertEqual(self.nums(r"\includegraphics[width=3.5cm]{fig-2024}"), [])
 
     def test_fact_marker_ignored_and_bound(self):
-        s = paperkit.scan_tex(r"解决 10 道\fact{A1}")
-        self.assertEqual([n["token"] for n in paperkit._extract_numbers(s.masked, "x")], ["10"])
+        s = factscribe.scan_tex(r"解决 10 道\fact{A1}")
+        self.assertEqual([n["token"] for n in factscribe._extract_numbers(s.masked, "x")], ["10"])
         self.assertEqual(s.bindings.get(1), ["A1"])
 
     def test_wiki_marker(self):
-        s = paperkit.scan_tex(r"解决 10 道 [[fact:A1]]")
-        self.assertEqual([n["token"] for n in paperkit._extract_numbers(s.masked, "x")], ["10"])
+        s = factscribe.scan_tex(r"解决 10 道 [[fact:A1]]")
+        self.assertEqual([n["token"] for n in factscribe._extract_numbers(s.masked, "x")], ["10"])
         self.assertEqual(s.markers, [("A1", 1)])
 
     def test_escaped_percent_is_not_comment(self):
@@ -385,9 +385,9 @@ derived_from = []
             with tempfile.TemporaryDirectory() as tmp:
                 root = make_project(tmp, sections={"a.tex": "见 \\cite{chen2023}。\n"},
                                     bib=BIB_OK)
-                cfg = paperkit.load_config(root)
-                red, yellow, hints, summary, resolved = paperkit.run_audit(
-                    cfg, paperkit.load_facts(cfg), paperkit.load_sections(cfg), resolve=True)
+                cfg = factscribe.load_config(root)
+                red, yellow, hints, summary, resolved = factscribe.run_audit(
+                    cfg, factscribe.load_facts(cfg), factscribe.load_sections(cfg), resolve=True)
                 self.assertEqual(red, [])
                 self.assertEqual(resolved[0]["status"], "unverified")
                 self.assertIn("CITE_UNVERIFIED", [h.code for h in hints])
@@ -401,7 +401,7 @@ class TestNotSilentlyPassing(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             p = run(["audit", tmp])
             self.assertEqual(p.returncode, 2)
-            self.assertIn("paperkit.toml", p.stderr)
+            self.assertIn("factscribe.toml", p.stderr)
 
     def test_empty_facts(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -429,7 +429,7 @@ class TestNotSilentlyPassing(unittest.TestCase):
     def test_missing_project_key(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = make_project(tmp)
-            (root / "paperkit.toml").write_text('[project]\ntitle = "t"\n', encoding="utf-8")
+            (root / "factscribe.toml").write_text('[project]\ntitle = "t"\n', encoding="utf-8")
             p = run(["check", str(root)])
             self.assertEqual(p.returncode, 2)
             self.assertIn("project.sections", p.stderr)
@@ -741,15 +741,15 @@ class TestV1Lexing(unittest.TestCase):
     """B3/C1/C4 的分词契约：唯一流水线。"""
 
     def nums(self, tex):
-        s = paperkit.scan_tex(tex)
-        return [n["token"] for n in paperkit._extract_numbers(s.masked, tex)]
+        s = factscribe.scan_tex(tex)
+        return [n["token"] for n in factscribe._extract_numbers(s.masked, tex)]
 
     def test_verbatim_percent_is_not_comment(self):
         tex = "\\begin{verbatim}\nprecision = 50% (raw log)\n\\end{verbatim}\n后面 10 个"
         self.assertEqual(self.nums(tex), ["10"])
 
-    def test_pkignore_explicit_exemption(self):
-        self.assertEqual(self.nums(r"年份 2024 \pkignore{2024} 与 10 个"), ["2024", "10"])
+    def test_fsignore_explicit_exemption(self):
+        self.assertEqual(self.nums(r"年份 2024 \fsignore{2024} 与 10 个"), ["2024", "10"])
 
     def test_superscript_subscript_are_structural(self):
         tex = r"We report $R^2 = 0.91$, $N = 1{,}024$, $\alpha = 0.05$, $x_{12}$."
@@ -757,18 +757,18 @@ class TestV1Lexing(unittest.TestCase):
 
     def test_scientific_notation_is_one_token(self):
         self.assertEqual(self.nums("lr 3e-4 and 4.2e-5"), ["3e-4", "4.2e-5"])
-        self.assertEqual(paperkit.number_key("3e-4"), "0.0003")
+        self.assertEqual(factscribe.number_key("3e-4"), "0.0003")
 
     def test_latex_thin_space_thousands(self):
         self.assertEqual(self.nums(r"a corpus of 1\,000\,000 tokens"), ["1000000"])
 
     def test_percent_word(self):
         self.assertEqual(self.nums("grew by 3.4 percent"), ["3.4%"])
-        self.assertEqual(paperkit.number_key("3.4", None, True), "0.034")
+        self.assertEqual(factscribe.number_key("3.4", None, True), "0.034")
 
     def test_cite_optional_args_are_masked(self):
-        s = paperkit.scan_tex(r"\citep[see][p.~3]{chen2023}")
-        self.assertEqual([n["token"] for n in paperkit._extract_numbers(s.masked, "x")], [])
+        s = factscribe.scan_tex(r"\citep[see][p.~3]{chen2023}")
+        self.assertEqual([n["token"] for n in factscribe._extract_numbers(s.masked, "x")], [])
 
 
 class TestV1ExitAndJson(unittest.TestCase):
@@ -911,7 +911,7 @@ confidence = "high"
             link = base / "data" / "raw.md"
             if not link.exists():
                 link.symlink_to(src)
-        (root / "paperkit.toml").write_text(
+        (root / "factscribe.toml").write_text(
             '[project]\ntitle = "t"\nsections = "sections/*.tex"\nfacts = "facts/*.toml"\n'
             'bib = "refs.bib"\nbuild = ""\nsource_root = "%s"\n' % base,
             encoding="utf-8")

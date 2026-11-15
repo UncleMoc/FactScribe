@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """论文项目登记册（与 MiniApp 共用同一份文件）。
 
-一个论文项目＝一个含 `paperkit.toml` 的文件夹。登记册固定在
+一个论文项目＝一个含 `factscribe.toml` 的
+文件夹。登记册固定在
 `~/.factscribe/projects.json`，只存路径、显示名、上次使用时间与解释器设置，
 不复制正文、不写项目文件夹。
 
@@ -18,7 +19,12 @@ from pathlib import Path
 
 REGISTRY_VERSION = 1
 MAX_PROJECTS = 30
-CONFIG_NAME = "paperkit.toml"
+CONFIG_NAME = "factscribe.toml"
+
+
+def config_file(root: str | os.PathLike[str]) -> Path:
+    """项目自己的声明文件：factscribe.toml。"""
+    return Path(root) / CONFIG_NAME
 
 # 文件夹名只允许这些字符：不做拼音转换（中文名自己写），也不许路径分隔符。
 SLUG_RE = re.compile(r"[A-Za-z0-9._-]+")
@@ -99,7 +105,7 @@ def write_registry(registry: dict) -> None:
 
 
 def resolve_project(raw: str | os.PathLike[str] | None) -> Path:
-    """展开 `~`、要求绝对路径、必须是含 paperkit.toml 的文件夹；返回真实路径。"""
+    """展开 `~`、要求绝对路径、必须是含 factscribe.toml 的文件夹；返回真实路径。"""
     from .config import ConfigError, load_config
 
     text = str(raw or "").strip()
@@ -120,8 +126,8 @@ def resolve_project(raw: str | os.PathLike[str] | None) -> Path:
         raise ConfigError("不是文件夹：%s" % expanded, code="PROJECT_INVALID")
     root = expanded.resolve()
     if not (root / CONFIG_NAME).exists():
-        raise ConfigError("这个文件夹不是论文项目：缺 %s（%s）" % (CONFIG_NAME, root),
-                          code="PROJECT_INVALID")
+        raise ConfigError("这个文件夹不是论文项目：缺 %s（%s）"
+                          % (CONFIG_NAME, root), code="PROJECT_INVALID")
     load_config(root)  # 坏配置在这里就报，别等界面加载到一半才炸
     return root
 
@@ -165,7 +171,7 @@ def remove_project(registry: dict, path: str) -> dict:
 def project_description(path: str | os.PathLike[str]) -> str:
     """项目的一句话简介（`[project] description`；读不到就是空串）。
 
-    简介写在项目自己的声明里，不进登记册——改了 `paperkit.toml` 立刻见效，
+    简介写在项目自己的声明里，不进登记册——改了 `factscribe.toml` 立刻见效，
     登记册的格式也就不用跟着变（MiniApp 侧读同一个文件）。
     """
     from .config import ConfigError, load_config
@@ -190,7 +196,7 @@ def _toml_value(text: str) -> str:
 
 
 def _rewrite_project_table(path: Path, values: dict) -> None:
-    """改写 `paperkit.toml` 的 `[project]` 表：只替换/追加给定的键，别的原样保留。
+    """改写项目声明（`factscribe.toml`）的 `[project]` 表：只替换/追加给定的键，别的原样保留。
 
     骨架模板里已经有的键就地替换；没有的追加到 `[project]` 段末尾。
     其它段（`[budget]`/`[evidence]` 之类）一个字都不动。
@@ -354,7 +360,7 @@ def update_project(registry: dict, path: str, name: str = "",
     """改一个**已在登记册里**的项目的名字与简介。
 
     两处一起改：登记册的 `name`/`description`，以及项目自己的
-    `paperkit.toml`（`title` 与 `description`；其它键原样保留）。
+    `factscribe.toml`（`title` 与 `description`；其它键原样保留）。
     路径不在册子里就拒绝——不然就变成「凭空造一个项目」。
     """
     reg = registry if isinstance(registry, dict) else {}
@@ -377,14 +383,14 @@ def update_project(registry: dict, path: str, name: str = "",
             code="PROJECT_NOT_REGISTERED")
     new_name = str(name or "").strip() or entry.get("name", "")
     new_desc = str(description or "").strip()
-    config_file = Path(entry["path"]) / CONFIG_NAME
-    if config_file.is_file():
-        text = config_file.read_text(encoding="utf-8")
+    cfg_file = config_file(Path(entry["path"]))
+    if cfg_file.is_file():
+        text = cfg_file.read_text(encoding="utf-8")
         values = {"description": _toml_value(new_desc)}
         if _has_project_table(text):
             # v1 与 v3 形态 B/C：名字在 [project].title。
             values["title"] = _toml_value(new_name)
-            _rewrite_project_table(config_file, values)
+            _rewrite_project_table(cfg_file, values)
             # v3 里顶层 name/title 优先于表里的：顶层有就一起改。
             top = _top_level_keys(text)
             flat = {}
@@ -392,12 +398,12 @@ def update_project(registry: dict, path: str, name: str = "",
                 flat["name"] = _toml_value(new_name)
             elif "title" in top:
                 flat["title"] = _toml_value(new_name)
-            _rewrite_flat_keys(config_file, flat)
+            _rewrite_flat_keys(cfg_file, flat)
         else:
             # 扁平 schema（v3 形态 A）：名字写在顶层。
             key = "name" if "name" in _top_level_keys(text) else "title"
             values[key] = _toml_value(new_name)
-            _rewrite_flat_keys(config_file, values)
+            _rewrite_flat_keys(cfg_file, values)
     entry["name"] = new_name
     entry["description"] = new_desc
     return {"path": entry["path"], "name": new_name, "description": new_desc}

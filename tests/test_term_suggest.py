@@ -363,7 +363,7 @@ class TestTermsAdd(CorpusCase):
 class TestLatexProject(CorpusCase):
     def test_project_sections_and_verbatim_masking(self):
         write_files(self.root, {
-            "paperkit.toml": ("[project]\ntitle = \"t\"\n"
+            "factscribe.toml": ("[project]\ntitle = \"t\"\n"
                               "sections = \"sections/*.tex\"\n"
                               "facts = \"facts/*.toml\"\n"),
             "facts/empty.toml": "",

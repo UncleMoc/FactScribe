@@ -11,7 +11,7 @@
 * ``--suggest`` 的 stdout 只有 TOML（可直接重定向、直接粘配置），摘要走掉；
 * ``--suggest`` 的 stdout 可被 ``tomllib`` 直接解析，且不含中文摘要；
 * 摘要出现在 stderr；``--json`` 的 stdout 是纯 JSON 且带统计字段；
-* stdout 直接追加到 ``paperkit.toml`` 后 ``--freeze`` 仍 exit 0（批 134 回归）。
+* stdout 直接追加到 ``factscribe.toml`` 后 ``--freeze`` 仍 exit 0（批 134 回归）。
 * ``evidence --freeze`` 写 ``audit/evidence.lock``：哈希与 entries；
 * 双跑同哈希；键序/重复 id 不同但规范化相同 → 同哈希；
 * 改一个 id / 加一节 / 挪一条 / 删一条 → ``EVIDENCE_SET_CHANGED`` 红，
@@ -163,7 +163,7 @@ def make_project(base: Path, *, evidence: dict | None = None,
             'bib = "refs.bib"\nbuild = ""\n')
     if evidence is not None:
         text += "\n" + evidence_block(evidence) + "\n"
-    write(root / "paperkit.toml", text)
+    write(root / "factscribe.toml", text)
     return root
 
 
@@ -296,7 +296,7 @@ class TestSuggestStreams(FreezeCase):
         root = self.project("streams-append")
         proc = self.run_suggest(root)
         self.assertEqual(proc.returncode, 0, proc.stderr)
-        cfg_path = root / "paperkit.toml"
+        cfg_path = root / "factscribe.toml"
         write(cfg_path,
               cfg_path.read_text(encoding="utf-8") + proc.stdout)
         frozen = self.freeze(root)
@@ -364,9 +364,9 @@ class TestLockCheck(FreezeCase):
         return root
 
     def rewrite_evidence(self, root: Path, evidence: dict) -> None:
-        cfg_text = (root / "paperkit.toml").read_text(encoding="utf-8")
+        cfg_text = (root / "factscribe.toml").read_text(encoding="utf-8")
         head = cfg_text.split("[evidence]")[0].rstrip()
-        write(root / "paperkit.toml",
+        write(root / "factscribe.toml",
               head + "\n\n" + evidence_block(evidence) + "\n")
 
     def lock_code(self, data: dict) -> list:

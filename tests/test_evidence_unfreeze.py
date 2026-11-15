@@ -115,9 +115,9 @@ def evidence_block(evidence: dict) -> str:
 
 
 def rewrite_evidence(root: Path, evidence: dict) -> None:
-    cfg_text = (root / "paperkit.toml").read_text(encoding="utf-8")
+    cfg_text = (root / "factscribe.toml").read_text(encoding="utf-8")
     head = cfg_text.split("[evidence]")[0].rstrip()
-    write(root / "paperkit.toml",
+    write(root / "factscribe.toml",
           head + "\n\n" + evidence_block(evidence) + "\n")
 
 
@@ -140,7 +140,7 @@ def make_project(base: Path, *, evidence: dict | None = None) -> Path:
             'bib = "refs.bib"\nbuild = ""\n')
     if evidence is not None:
         text += "\n" + evidence_block(evidence) + "\n"
-    write(root / "paperkit.toml", text)
+    write(root / "factscribe.toml", text)
     return root
 
 

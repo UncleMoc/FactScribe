@@ -145,7 +145,7 @@ def make_project(base: Path, sections: dict[str, str],
             lines.append('"%s" = [%s]'
                          % (key, ", ".join('"%s"' % i for i in ids)))
         text += "\n" + "\n".join(lines) + "\n"
-    write(root / "paperkit.toml", text)
+    write(root / "factscribe.toml", text)
     write(root / "facts" / "facts.toml", FACTS_TOML)
     for rel, body in sections.items():
         write(root / rel, body)
@@ -290,7 +290,7 @@ class TestEvidenceDropped(EvidenceCase):
 
     def test_dropped_does_not_need_evidence_declaration(self):
         before, after = self.make_pair(SECTION_B1_ONLY)
-        self.assertNotIn("[evidence]", (after / "paperkit.toml").read_text())
+        self.assertNotIn("[evidence]", (after / "factscribe.toml").read_text())
         result = analyze(
             load_config(after),
             load_sections(load_config(after)),

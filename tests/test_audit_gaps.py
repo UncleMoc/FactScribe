@@ -104,7 +104,7 @@ def make_project(tmp, facts=FACTS, sections=None, results_text=RESULT_TEXT,
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(text, encoding="utf-8")
     (root / "refs.bib").write_text(BIB_OK, encoding="utf-8")
-    (root / "paperkit.toml").write_text(
+    (root / "factscribe.toml").write_text(
         '[project]\ntitle = "t"\nauthors = ["a"]\n'
         'sections = "sections/*.tex"\nfacts = "facts/*.toml"\n'
         'bib = "refs.bib"\nbuild = ""\n', encoding="utf-8")

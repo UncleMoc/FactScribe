@@ -23,7 +23,7 @@ sys.path.insert(0, str(ROOT))
 
 from factscribe.citeview import citations_data  # noqa: E402
 
-PAPERKIT_TOML = """\
+FACTSCRIBE_TOML = """\
 [project]
 title = "引用页测试"
 sections = "sections/*.tex"
@@ -79,7 +79,7 @@ class CitationsDataTest(unittest.TestCase):
         self.root = Path(self.tmp.name) / "paper"
         (self.root / "sections").mkdir(parents=True)
         (self.root / "facts").mkdir(parents=True)
-        (self.root / "paperkit.toml").write_text(PAPERKIT_TOML, encoding="utf-8")
+        (self.root / "factscribe.toml").write_text(FACTSCRIBE_TOML, encoding="utf-8")
         (self.root / "refs.bib").write_text(REFS_BIB, encoding="utf-8")
         (self.root / "extra.bib").write_text(EXTRA_BIB, encoding="utf-8")
         (self.root / "sections" / "01-intro.tex").write_text(INTRO_TEX,
@@ -182,7 +182,7 @@ class EmptyProjectTest(unittest.TestCase):
         self.root = Path(self.tmp.name) / "paper"
         (self.root / "sections").mkdir(parents=True)
         (self.root / "facts").mkdir(parents=True)
-        (self.root / "paperkit.toml").write_text(PAPERKIT_TOML, encoding="utf-8")
+        (self.root / "factscribe.toml").write_text(FACTSCRIBE_TOML, encoding="utf-8")
         (self.root / "sections" / "01-intro.tex").write_text(
             "这一节没有引用。\n", encoding="utf-8")
 
@@ -208,7 +208,7 @@ class CiteCountTest(unittest.TestCase):
         self.root = Path(self.tmp.name) / "paper"
         (self.root / "sections").mkdir(parents=True)
         (self.root / "facts").mkdir(parents=True)
-        (self.root / "paperkit.toml").write_text(PAPERKIT_TOML, encoding="utf-8")
+        (self.root / "factscribe.toml").write_text(FACTSCRIBE_TOML, encoding="utf-8")
         (self.root / "refs.bib").write_text(REFS_BIB, encoding="utf-8")
         (self.root / "extra.bib").write_text(EXTRA_BIB, encoding="utf-8")
 

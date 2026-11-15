@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""项目声明读取：factscribe.toml/paperkit.toml、迷你 TOML、facts/sections 装载。"""
+"""项目声明读取：factscribe.toml、迷你 TOML、facts/sections 装载。"""
 from __future__ import annotations
 
 import hashlib
@@ -126,7 +126,7 @@ def _table_for(root: dict, name: str):
 
 
 def _mini_toml(text: str) -> dict:
-    """只覆盖 paperkit 契约用得到的子集：表、表数组、字符串、数组、数字、布尔。"""
+    """只覆盖 factscribe 契约用得到的子集：表、表数组、字符串、数组、数字、布尔。"""
     root: dict = {}
     cur: dict = root
     lines = text.splitlines()
@@ -199,7 +199,7 @@ class Config:
     numeric_macro_rules: list = field(default_factory=list)  # V3：结构化数值宏登记（S-08）
     facts_dirs: bool = False     # V3：facts 配的是目录而不是 glob
 
-    # ---- V3.0 扁平项目声明（schema = "paperkit-project/3.x"）----
+    # ---- V3.0 扁平项目声明（schema = "factscribe-project/3.x"）----
     # v1 配置不写顶层 schema，以下字段保持默认值，行为与旧版完全一致。
     schema: str = ""
     name: str = ""
@@ -247,11 +247,11 @@ class Config:
         return "runs" if self.is_v3 else "results"
 
 
-# V3.0 项目声明有两个已冻结的字面量：规范正文里的 `paperkit-project/3.x`
+# V3.0 项目声明有两个已冻结的字面量：规范正文里的 `factscribe-project/3.x`
 # 与早期盲测/工单里使用的 `factscribe/3.x`。两者是同一套扁平声明的别名。
-V3_PROJECT_SCHEMA_PREFIXES = ("paperkit-project/3.", "factscribe/3.")
+V3_PROJECT_SCHEMA_PREFIXES = ("factscribe-project/3.", "factscribe/3.")
 V3_PROJECT_SCHEMA_PREFIX = V3_PROJECT_SCHEMA_PREFIXES[0]
-V3_FACT_SCHEMA_PREFIXES = ("paperkit-fact/3.", "factscribe-fact/3.")
+V3_FACT_SCHEMA_PREFIXES = ("factscribe-fact/3.",)
 V3_FACT_SCHEMA_PREFIX = V3_FACT_SCHEMA_PREFIXES[0]
 SIGNING_MODES = ("offline_manifest", "local_key")
 NUMBER_LOCALES = ("period", "comma")
@@ -780,12 +780,23 @@ def _load_v3_config(root: Path, path: Path, data: dict,
     return cfg
 
 
+CONFIG_FILENAME = "factscribe.toml"
+
+
+def find_config_file(root: Path) -> Path | None:
+    """项目声明文件：factscribe.toml。"""
+    path = root / CONFIG_FILENAME
+    if path.is_file():
+        return path
+    return None
+
+
 def load_config(root: Path) -> Config:
-    path = root / "factscribe.toml"
-    if not path.is_file():
-        path = root / "paperkit.toml"
-    if not path.is_file():
-        raise ConfigError("找不到项目声明 %s（缺 paperkit.toml 不敢跑）" % path)
+    path = find_config_file(root)
+    if path is None:
+        raise ConfigError(
+            "找不到项目声明 %s（缺 factscribe.toml 不敢跑）"
+            % (root / CONFIG_FILENAME))
     data = load_toml(path)
 
     # ---- 形态判定（SPEC-V3.0 §10 冻结顺序，自上而下，先命中先用）----

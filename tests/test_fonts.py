@@ -64,7 +64,7 @@ def make_project(tmp: Path):
     (root / "facts").mkdir()
     (root / "sections" / "a.tex").write_text("占位正文\n", encoding="utf-8")
     (root / "refs.bib").write_text("", encoding="utf-8")
-    (root / "paperkit.toml").write_text(
+    (root / "factscribe.toml").write_text(
         '[project]\ntitle = "t"\nauthors = ["a"]\n'
         'sections = "sections/*.tex"\nfacts = "facts/*.toml"\n'
         'bib = "refs.bib"\nbuild = ""\n', encoding="utf-8")

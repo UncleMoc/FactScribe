@@ -64,7 +64,7 @@ sources = [
 ]
 """
 
-PAPERKIT_TOML = """\
+FACTSCRIBE_TOML = """\
 [project]
 title = "P0 测试"
 sections = "sections/*.tex"
@@ -127,7 +127,7 @@ class Workspace:
     # ---- 论文项目 ----
     def write_paper(self):
         paper = self.root / "paper"
-        (paper / "paperkit.toml").write_text(PAPERKIT_TOML, encoding="utf-8")
+        (paper / "factscribe.toml").write_text(FACTSCRIBE_TOML, encoding="utf-8")
         (paper / "refs.bib").write_text("", encoding="utf-8")
         (paper / "sections" / "01-intro.tex").write_text(
             "本节没有数字，只有一句话。\n", encoding="utf-8")
@@ -401,8 +401,8 @@ class TestFactImport(BaseCase):
 
     def test_import_source_outside_project(self):
         # 论文项目没配 source_root 时，来源必须落在项目根内
-        (self.ws.paper / "paperkit.toml").write_text(
-            PAPERKIT_TOML.replace('source_root = "../experiments/e/raw"\n', ""),
+        (self.ws.paper / "factscribe.toml").write_text(
+            FACTSCRIBE_TOML.replace('source_root = "../experiments/e/raw"\n', ""),
             encoding="utf-8")
         self.ws.lock_and_sign()
         code, out, _err = run_cli("fact", "import", str(self.ws.root),

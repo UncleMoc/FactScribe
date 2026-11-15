@@ -129,7 +129,7 @@ def build_parser() -> argparse.ArgumentParser:
     sp = sub.add_parser(
         "init",
         help="上手第一步：生成最小可用项目骨架（7 个文件，确定性别名）",
-        description="生成最小可用项目骨架：paperkit.toml / main.tex / "
+        description="生成最小可用项目骨架：factscribe.toml / main.tex / "
                     "sections/01-intro.tex / facts/01-core.toml / "
                     "results/MANIFEST.toml / refs.bib / README.md。"
                     "不写时间戳、不写绝对路径（同参数两次生成逐字节一致）；"
@@ -231,7 +231,7 @@ def build_parser() -> argparse.ArgumentParser:
         ("audit", "核心：内联绑定 + 数字回账 + 引用落稳定标识 + 覆盖报告"),
         ("matrix", "生成 audit/matrix.md 追溯矩阵"),
         ("build", "执行 project.build；为空时用 tectonic 自动编译 main.tex"),
-        ("preamble", "生成 audit/preamble.tex（\\fact / \\pkignore 宏定义）"),
+        ("preamble", "生成 audit/preamble.tex（\\fact / \\fsignore 宏定义）"),
     ):
         sp = sub.add_parser(name, help=help_text)
         sp.add_argument("project", nargs="?", default=".", help="项目目录（默认当前目录）")
@@ -336,7 +336,7 @@ def build_parser() -> argparse.ArgumentParser:
                     help="项目目录（默认当前目录；与 --doc 互斥）")
     sp.add_argument("--doc", action="append", nargs="+", default=None,
                     metavar="FILE",
-                    help="文档模式：直接扫文件，不需要 paperkit.toml；"
+                    help="文档模式：直接扫文件，不需要 factscribe.toml；"
                          "按扩展名判定格式（.md/.markdown = Markdown，"
                          ".tex = LaTeX，其它 = 纯文本）。可重复，可一次多个")
     sp.add_argument("--json", action="store_true", help="机器可读输出（stdout 只出 JSON）")
@@ -350,7 +350,7 @@ def build_parser() -> argparse.ArgumentParser:
                          "revision（改稿阶段，NUMERAL_DENSITY 降为 info）")
     sp.add_argument("--diff", default=None, metavar="BEFORE",
                     help="改写前目录：只报本次改写新增的违规，并启用标题"
-                         "关系词/主语丢失比对（需该目录有 paperkit.toml）")
+                         "关系词/主语丢失比对（需该目录有 factscribe.toml）")
     sp.add_argument("--report-unregistered", action="store_true",
                     help="打开 TERM_UNREGISTERED 提示（默认关；只查标题，"
                          "结果进 info 通道，不进 findings、不影响退出码）")
@@ -480,7 +480,7 @@ def build_parser() -> argparse.ArgumentParser:
         "evidence",
         help="证据清单：--suggest 出 [evidence] 块，--freeze/--unfreeze 冻结与解冻",
         description="证据清单可由人或 LLM 产出，但由机器冻结：--suggest 扫描"
-                    "正文 \\fact{} 引用，输出可直接粘进 paperkit.toml 的 "
+                    "正文 \\fact{} 引用，输出可直接粘进 factscribe.toml 的 "
                     "[evidence] 块；--freeze 读当前清单，写 audit/evidence.lock"
                     "（规范化哈希 + 明文底稿）。冻结后 audit/review 检查清单"
                     "有没有被改，改了就红 EVIDENCE_SET_CHANGED。"
@@ -1038,7 +1038,7 @@ def cmd_audit(args) -> int:
                                build=build, build_output=bout)
             payload["config"] = _config_block(cfg)
             payload["config_warnings"] = list(cfg.warnings)
-            _emit(payload, "== paperkit audit ==\n编译失败，审计中止（退出码 %d）\n%s"
+            _emit(payload, "== factscribe audit ==\n编译失败，审计中止（退出码 %d）\n%s"
                   % (bcode, bout), args.json)
             return bcode
     facts = load_facts(cfg)
@@ -1122,7 +1122,7 @@ def cmd_matrix(args) -> int:
     out = Path(args.out) if getattr(args, "out", None) else cfg.root / "audit" / "matrix.md"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(text, encoding="utf-8")
-    human = "== paperkit matrix ==\n写盘：%s\n行数：%d（每行一条 fact）\n%s" % (
+    human = "== factscribe matrix ==\n写盘：%s\n行数：%d（每行一条 fact）\n%s" % (
         out, len(rows), text)
     payload = _payload("matrix", "ok", EXIT_OK, path=str(out), rows=rows,
                        facts=len(rows))
@@ -1137,7 +1137,7 @@ def cmd_preamble(args) -> int:
     out = Path(args.out) if getattr(args, "out", None) else cfg.root / "audit" / "preamble.tex"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(PREAMBLE_TEXT, encoding="utf-8")
-    human = "== paperkit preamble ==\n写盘：%s\n%s" % (out, PREAMBLE_TEXT)
+    human = "== factscribe preamble ==\n写盘：%s\n%s" % (out, PREAMBLE_TEXT)
     payload = _payload("preamble", "ok", EXIT_OK, path=str(out))
     payload["config"] = _config_block(cfg)
     payload["config_warnings"] = list(cfg.warnings)
@@ -1173,7 +1173,7 @@ def cmd_build(args) -> int:
     payload.update(info)
     payload["config"] = _config_block(cfg)
     payload["config_warnings"] = list(cfg.warnings)
-    _emit(payload, "== paperkit build ==\n" + out, args.json)
+    _emit(payload, "== factscribe build ==\n" + out, args.json)
     return code
 
 
@@ -1181,7 +1181,7 @@ def _cmd_style_doc(args, paths: list[str]) -> int:
     """``style --doc``：文档模式，不读项目配置，按扩展名分派解析器。"""
     if args.project is not None:
         raise ConfigError("--doc 与项目目录不能同时给出：doc 模式不需要 "
-                          "paperkit.toml；项目模式请去掉 --doc")
+                          "factscribe.toml；项目模式请去掉 --doc")
     if getattr(args, "diff", None):
         raise ConfigError("--doc 不支持 --diff：改写前目录属于项目形态")
     root = Path.cwd()

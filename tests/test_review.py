@@ -55,7 +55,7 @@ def payload(proc) -> dict:
 def make_project(root: Path, files: dict[str, str]) -> Path:
     root.mkdir(parents=True, exist_ok=True)
     (root / "facts").mkdir(parents=True, exist_ok=True)
-    (root / "paperkit.toml").write_text(TOML, encoding="utf-8")
+    (root / "factscribe.toml").write_text(TOML, encoding="utf-8")
     for rel, text in files.items():
         path = root / rel
         path.parent.mkdir(parents=True, exist_ok=True)

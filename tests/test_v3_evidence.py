@@ -127,7 +127,7 @@ expires = "2099-01-01"
     def test_v1_stays_v1(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            (root / "paperkit.toml").write_text(
+            (root / "factscribe.toml").write_text(
                 '[project]\ntitle = "x"\nsections = "sections/*.tex"\n'
                 'facts = "facts/*.toml"\n', encoding="utf-8")
             cfg = load_config(root)

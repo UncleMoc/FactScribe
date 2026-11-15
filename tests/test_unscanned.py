@@ -78,7 +78,7 @@ def make_project(tmp, extra=None):
         "[manifest]\nsigned_by = \"test-human\"\n"
         "signed_at = \"2026-11-07T00:00:00Z\"\nversion = 1\n\n[files]\n"
         '"results/raw.md" = "%s"\n' % digest, encoding="utf-8")
-    (root / "paperkit.toml").write_text(
+    (root / "factscribe.toml").write_text(
         '[project]\ntitle = "t"\nauthors = ["a"]\n'
         'sections = "sections/*.tex"\nfacts = "facts/*.toml"\n'
         'bib = "refs.bib"\nbuild = ""\n', encoding="utf-8")

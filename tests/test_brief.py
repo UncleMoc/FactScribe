@@ -90,7 +90,7 @@ def make_project(base: Path, *, facts: bool = True,
                  glossary: bool = True,
                  fact_ids: tuple = ("A1", "A2", "B1")) -> Path:
     root = Path(base)
-    write(root / "paperkit.toml", PROJECT_TOML)
+    write(root / "factscribe.toml", PROJECT_TOML)
     write(root / "main.tex", MAIN_TEX)
     write(root / "sections" / "01_alpha.tex", ALPHA_TEX)
     write(root / "sections" / "02_zeta.tex", ZETA_TEX)

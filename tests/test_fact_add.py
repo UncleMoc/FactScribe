@@ -81,7 +81,7 @@ class TestFactAddHappyPath(unittest.TestCase):
         """账本路径必须落在 cfg.facts_glob 内，否则写了也读不到。"""
         with tempfile.TemporaryDirectory() as tmp:
             root = new_project(tmp)
-            cfg_path = root / "paperkit.toml"
+            cfg_path = root / "factscribe.toml"
             cfg_path.write_text(
                 cfg_path.read_text(encoding="utf-8").replace(
                     'facts = "facts/*.toml"', 'facts = "ledger/*.toml"'),
@@ -96,7 +96,7 @@ class TestFactAddHappyPath(unittest.TestCase):
         """sections 写单个文件名时也走 v1；以前会被判成 V3，fact add 直接拒绝。"""
         with tempfile.TemporaryDirectory() as tmp:
             root = new_project(tmp)
-            cfg_path = root / "paperkit.toml"
+            cfg_path = root / "factscribe.toml"
             cfg_path.write_text(
                 cfg_path.read_text(encoding="utf-8").replace(
                     'sections = "sections/*.tex"',
@@ -317,7 +317,7 @@ class TestInitAddCheckEndToEnd(unittest.TestCase):
             # check 是判据命令：0 绿 / 1 红 / 3 黄；这里只要求它「真的跑完」，
             # 不是 2（配置坏）也不是 4（工具内部错误）。
             self.assertIn(proc.returncode, (0, 1, 3), proc.stdout + proc.stderr)
-            self.assertIn("== paperkit check ==", proc.stdout)
+            self.assertIn("== factscribe check ==", proc.stdout)
             self.assertIn("结论：", proc.stdout)
             self.assertIn("facts   : 1 条", proc.stdout)
             # 现在应报的正是「清单没人签」与「value 不在 source 里」：

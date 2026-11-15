@@ -406,12 +406,12 @@ class TestIgnore(Base):
     def test_non_ignored_extensions_still_counted(self):
         self.rewrite("refs.bib", "@book{x}\n")
         self.rewrite("notes.md", "# n\n")
-        self.rewrite("paperkit.toml", "build = ''\n")
+        self.rewrite("factscribe.toml", "build = ''\n")
         self.rewrite("figures/f.pdf", "%PDF-1.4\n")
         self.rewrite("main.aux", "artifact\n")
         data = self.commit()
         self.assertEqual([r["path"] for r in data["rises"]],
-                         ["figures/f.pdf", "notes.md", "paperkit.toml",
+                         ["factscribe.toml", "figures/f.pdf", "notes.md",
                           "refs.bib"])
 
     def test_ignore_glob_appends_to_defaults(self):

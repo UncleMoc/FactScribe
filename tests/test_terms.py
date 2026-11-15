@@ -55,7 +55,7 @@ def make_project(base: Path, sections: dict, glossary: str | None = GLOSSARY,
     (root / "facts").mkdir(parents=True, exist_ok=True)
     for name, body in sections.items():
         (root / "sections" / name).write_text(body, encoding="utf-8")
-    (root / "paperkit.toml").write_text(PROJECT_TOML, encoding="utf-8")
+    (root / "factscribe.toml").write_text(PROJECT_TOML, encoding="utf-8")
     if glossary is not None:
         (root / "glossary.tsv").write_text(glossary, encoding="utf-8")
     if rules is not None:

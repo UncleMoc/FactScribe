@@ -22,7 +22,7 @@ DEFAULT_TITLE = {"zh": "未命名论文", "en": "Untitled Paper"}
 
 # init 生成的文件（相对项目根，顺序即落盘顺序，也是 --json 里的 files 顺序）
 INIT_FILES = (
-    "paperkit.toml",
+    "factscribe.toml",
     "main.tex",
     "sections/01-intro.tex",
     "facts/01-core.toml",
@@ -75,7 +75,7 @@ def toml_array(items) -> str:
 # init：模板
 # --------------------------------------------------------------------------
 
-_PAPERKIT = {
+_CONFIG_TOML = {
     "zh": """\
 # 项目声明（由 `factscribe init` 生成）。全是明文字段，直接改这里。
 [project]
@@ -362,7 +362,7 @@ def _render(lang: str, title: str, author: str) -> dict[str, str]:
     author_line = (("作者：%s。" if lang == "zh" else "by %s.") % author
                    if author else "")
     mapping = {
-        "paperkit.toml": (_PAPERKIT[lang]
+        "factscribe.toml": (_CONFIG_TOML[lang]
                           .replace("__TITLE__", toml_string(title))
                           .replace("__AUTHORS__", toml_array(authors))),
         "main.tex": (_MAIN_TEX[lang]

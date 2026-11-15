@@ -570,7 +570,7 @@ class _Handler(BaseHTTPRequestHandler):
     def _project_rows(registry: dict) -> list:
         """登记册的每一项补上 `description` 与 `guide`。
 
-        `description` 读项目自己的声明（改了 paperkit.toml 立刻见效）；
+        `description` 读项目自己的声明（改了 factscribe.toml 立刻见效）；
         `guide` 标出内置示例论文——列表里要把它挑出去。
         """
         rows = []
@@ -664,7 +664,7 @@ class _Handler(BaseHTTPRequestHandler):
             python=registry["python"], pythonpath=registry["pythonpath"]))
 
     def _projects_update(self) -> None:
-        """改项目的名字与简介：登记册 + `paperkit.toml` 一起改。
+        """改项目的名字与简介：登记册 + `factscribe.toml` 一起改。
 
         要 token，也要 `--allow-write`（它写盘）。路径不在登记册里 → 400。
         """

@@ -67,7 +67,7 @@ def make_project(tmp, body="见 \\cite{used2020}。\n", bib=BIB,
     if allow_unused is not None:
         extra = "bib_allow_unused = [%s]\n" % ", ".join(
             '"%s"' % k for k in allow_unused)
-    (root / "paperkit.toml").write_text(
+    (root / "factscribe.toml").write_text(
         '[project]\ntitle = "t"\nsections = "sections/*.tex"\n'
         'facts = "facts/*.toml"\nbib = "refs.bib"\n%s' % extra,
         encoding="utf-8")
@@ -180,7 +180,7 @@ class TestAllowUnusedConfig(unittest.TestCase):
             (root / "sections").mkdir()
             (root / "sections" / "body.tex").write_text("plain\n", encoding="utf-8")
             (root / "factscribe.toml").write_text(
-                'schema = "paperkit-project/3.0"\n'
+                'schema = "factscribe-project/3.0"\n'
                 'root_tex = "sections/body.tex"\n'
                 'bib_allow_unused = ["stale2020", "other2021"]\n',
                 encoding="utf-8")

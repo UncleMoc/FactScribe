@@ -28,7 +28,7 @@ sys.path.insert(0, str(ROOT))
 from factscribe.config import load_config, load_facts, load_toml  # noqa: E402
 
 FILES = [
-    "paperkit.toml",
+    "factscribe.toml",
     "main.tex",
     "sections/01-intro.tex",
     "facts/01-core.toml",
@@ -67,13 +67,13 @@ class TestInitFiles(unittest.TestCase):
             target = Path(tmp) / "a" / "b" / "paper"
             proc = run("init", str(target))
             self.assertEqual(proc.returncode, 0, proc.stderr)
-            self.assertTrue((target / "paperkit.toml").is_file())
+            self.assertTrue((target / "factscribe.toml").is_file())
 
     def test_project_toml_parses_and_declares_v1_skeleton(self):
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "proj"
             run("init", str(target), "--title", "Demo", "--author", "张三")
-            data = load_toml(target / "paperkit.toml")
+            data = load_toml(target / "factscribe.toml")
             proj = data["project"]
             self.assertEqual(proj["title"], "Demo")
             self.assertEqual(proj["authors"], ["张三"])
@@ -125,7 +125,7 @@ class TestInitRefusals(unittest.TestCase):
             proc = run("init", str(target))
             self.assertEqual(proc.returncode, 2)
             self.assertIn("非空", proc.stderr)
-            self.assertFalse((target / "paperkit.toml").exists())
+            self.assertFalse((target / "factscribe.toml").exists())
             self.assertEqual((target / "keep.txt").read_text(encoding="utf-8"), "mine")
 
     def test_hidden_file_counts_as_non_empty(self):
@@ -148,7 +148,7 @@ class TestInitRefusals(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             target = Path(tmp) / "proj"
             target.mkdir()
-            (target / "paperkit.toml").write_text("junk = 1\n", encoding="utf-8")
+            (target / "factscribe.toml").write_text("junk = 1\n", encoding="utf-8")
             (target / "keep.txt").write_text("mine", encoding="utf-8")
             proc = run("init", str(target), "--force", "--title", "Forced")
             self.assertEqual(proc.returncode, 0, proc.stderr)
@@ -187,8 +187,8 @@ class TestInitDeterminism(unittest.TestCase):
             run("init", str(a), "--title", "One")
             run("init", str(b), "--title", "Two")
             self.assertNotEqual(snapshot(a), snapshot(b))
-            self.assertIn(b"One", (a / "paperkit.toml").read_bytes())
-            self.assertIn(b"Two", (b / "paperkit.toml").read_bytes())
+            self.assertIn(b"One", (a / "factscribe.toml").read_bytes())
+            self.assertIn(b"Two", (b / "factscribe.toml").read_bytes())
 
     def test_no_absolute_path_leaks_into_generated_files(self):
         with tempfile.TemporaryDirectory() as tmp:

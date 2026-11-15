@@ -124,7 +124,7 @@ class ProjectsCreateTest(unittest.TestCase):
         self.assertEqual(project["description"], "一句话简介：送达证据，而非规则。")
 
         # 骨架真的落了盘
-        self.assertTrue((root / "paperkit.toml").is_file())
+        self.assertTrue((root / "factscribe.toml").is_file())
         self.assertTrue((root / "main.tex").is_file())
         self.assertTrue((root / "sections" / "01-intro.tex").is_file())
         self.assertTrue((root / "facts").is_dir())
@@ -132,11 +132,11 @@ class ProjectsCreateTest(unittest.TestCase):
         # 只生成骨架，不编译
         self.assertFalse((root / "main.pdf").exists())
 
-    def test_paperkit_toml_has_description_build_source_root(self):
+    def test_factscribe_toml_has_description_build_source_root(self):
         status, data = self._create()
         self.assertEqual(status, 200, data)
         root = Path(data["project"]["path"])
-        text = (root / "paperkit.toml").read_text(encoding="utf-8")
+        text = (root / "factscribe.toml").read_text(encoding="utf-8")
         self.assertIn('description = "一句话简介：送达证据，而非规则。"', text)
         self.assertIn('build = "tectonic -X compile main.tex"', text)
         self.assertIn('source_root = "%s"' % self.work, text)
@@ -186,7 +186,7 @@ class ProjectsCreateTest(unittest.TestCase):
         (self.work / "paper-empty").mkdir(parents=True)
         status, data = self._create(slug="paper-empty")
         self.assertEqual(status, 200, data)
-        self.assertTrue((self.work / "paper-empty" / "paperkit.toml").is_file())
+        self.assertTrue((self.work / "paper-empty" / "factscribe.toml").is_file())
 
     def test_bad_slug_is_400(self):
         for slug in ["bad/name", "..", ".", "有中文", "a b"]:

@@ -125,7 +125,7 @@ class WebBuildTest(unittest.TestCase):
         cls.tmp = tempfile.TemporaryDirectory()
         cls.root = Path(cls.tmp.name) / "paper"
         shutil.copytree(ROOT / "examples" / "minimal", cls.root)
-        conf = cls.root / "paperkit.toml"
+        conf = cls.root / "factscribe.toml"
         text = conf.read_text(encoding="utf-8")
         text = text.replace('build = "tectonic -X compile main.tex"',
                             'build = "printf \'%%PDF-1.4\' > main.pdf"')
@@ -676,13 +676,13 @@ class ProjectManagementTest(unittest.TestCase):
         project = str(ROOT / "examples" / "minimal")
         status, data = self._call("/api/projects", "POST", {"path": project})
         self.assertEqual(status, 200, data)
-        self.assertEqual(data["project"]["name"], "paperkit 最小验收样例")
+        self.assertEqual(data["project"]["name"], "factscribe 最小验收样例")
         selected = data["project"]["path"]
         self.assertEqual(data["projects"][0]["path"], selected)
 
         status, data = self._call("/api/status")
         self.assertEqual(status, 200)
-        self.assertEqual(data["project"], "paperkit 最小验收样例")
+        self.assertEqual(data["project"], "factscribe 最小验收样例")
 
         status, _ = self._call("/api/projects", "POST", {"path": "/tmp"})
         self.assertEqual(status, 400)
