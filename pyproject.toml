@@ -9,7 +9,7 @@ description = "Mechanical gate for numbers and citations in LaTeX papers: every 
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
-authors = [{ name = "paperkit contributors" }]
+authors = [{ name = "factscribe contributors" }]
 keywords = ["latex", "reproducibility", "citations", "fact-checking", "paper"]
 classifiers = [
   "Development Status :: 4 - Beta",
